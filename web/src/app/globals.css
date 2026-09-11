@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --background: #050505;
+  --foreground: #f2f1ec;
+  --muted: #8a8a85;
+  --border: #232322;
+  --surface: #0d0d0c;
+  --accent-up: #3ecf72;
+  --accent-down: #ef5555;
+  --font-mono-stack: "Courier New", Courier, "Liberation Mono", ui-monospace, monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+  --font-sans: var(--font-mono-stack);
+  --font-mono: var(--font-mono-stack);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-mono-stack);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+::selection {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+a {
+  color: inherit;
+}
+
+/* Team-color glow accents. Kept intentionally subtle and scoped to hover /
+   focus so color is used sparingly per the design spec, rather than as
+   always-on fills. Consumers set --glow-strong / --glow-soft (rgba strings)
+   inline via lib/color.ts's rgba(). */
+.glow-on-hover {
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+.glow-on-hover:hover,
+.glow-on-hover:focus-visible {
+  box-shadow: 0 0 10px var(--glow-strong), 0 0 24px var(--glow-soft);
+  border-color: transparent;
+}
+
+.glow-on-hover-text {
+  text-shadow: none;
+  transition: text-shadow 200ms ease, color 200ms ease;
+}
+.glow-on-hover-text:hover,
+.glow-on-hover-text:focus-visible {
+  text-shadow: 0 0 8px var(--glow-strong), 0 0 18px var(--glow-soft);
+}
+
+/* Always-on soft glow, for a page's primary identity element (e.g. a team
+   page header) rather than a hover-only accent. */
+.glow-static {
+  box-shadow: 0 0 14px var(--glow-strong), 0 0 32px var(--glow-soft);
+}
+.glow-static-text {
+  text-shadow: 0 0 10px var(--glow-strong), 0 0 22px var(--glow-soft);
+}
+
+/* Thin scrollbars matching the terminal aesthetic */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
