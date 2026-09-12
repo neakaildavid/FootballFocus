@@ -14,6 +14,9 @@ players and teams. Free data sources only; automated weekly updates.
 - **`db/`** — SQL schema/migrations + static seed data, applied via plain
   `psql` (no ORM). See `db/README.md` for local setup and the full schema
   overview.
+- **`pipeline/`** — Python ingestion CLI (`nfl_data_py`/nflverse → Postgres).
+  See `pipeline/README.md` for setup (needs Python 3.11 specifically) and
+  what's ingested vs. deferred to later build steps.
 
 ## Architecture decisions (locked in with the project owner)
 
@@ -50,8 +53,16 @@ players and teams. Free data sources only; automated weekly updates.
    see `db/README.md`. Applied and validated against a local Postgres
    instance (32 teams seeded, FK/CHECK constraints and cross-table joins
    confirmed working); not yet pointed at a real Neon project.
-3. `nfl_data_py` ingestion pipeline (historical + current season: stats,
-   rosters, snap counts, schedules).
+3. **[done]** `nfl_data_py` ingestion pipeline (stats, rosters, snap counts,
+   schedules) — see `pipeline/README.md`. Validated against real data
+   (seasons 2015 + 2024, chosen to exercise historical team-abbreviation
+   aliasing): all 552 games, ~97% of offense weekly-stat rows, and ~99.9%
+   of offense snap-count rows resolved and landed correctly; 2024 passing
+   leaders came back matching known real results. Red zone splits, team
+   EPA/success rate, and route participation are deferred to steps 5-7
+   (need play-by-play/charting data this step doesn't touch). Full
+   1999-present historical backfill and the live odds API are not yet run
+   — see `pipeline/README.md`'s scope table.
 4. Season Stats Leaders page (filters + trending arrows), Player Pages, Team
    Pages.
 5. Hub Grade model, Last Week page, Upcoming Week page (wire in odds).

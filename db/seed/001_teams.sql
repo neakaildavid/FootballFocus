@@ -48,8 +48,14 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Historical abbreviation aliases for franchises that relocated/rebranded
 -- since 1999 (nfl_data_py's earliest season). season_end is the last season
--- the alias was used; NULL means it's the current abbreviation (already
--- covered by teams.abbr, listed here too so ingestion can resolve either).
+-- the alias was used; NULL means it's still in use. Note 'LA' isn't just a
+-- 2016-2019 transitional abbreviation as the Rams' branding history might
+-- suggest — nflverse's import_schedules() keeps using 'LA' (not 'LAR') for
+-- the Rams' home/away team column indefinitely, confirmed against real 2024
+-- schedule data, even though import_weekly_data()/import_players() use
+-- 'LAR'. Both are kept valid with overlapping ranges rather than picking
+-- one, since ingestion needs to resolve whichever a given nflverse table
+-- happens to use.
 INSERT INTO team_abbr_aliases (alias_abbr, team_id, season_start, season_end)
 VALUES
   ('OAK', 'lv', 1999, 2019),
@@ -57,9 +63,11 @@ VALUES
   ('SD', 'lac', 1999, 2016),
   ('LAC', 'lac', 2017, NULL),
   ('STL', 'lar', 1999, 2015),
-  ('LA', 'lar', 2016, 2019),
+  ('LA', 'lar', 2016, NULL),
   ('LAR', 'lar', 2020, NULL),
   ('WAS', 'was', 1999, 2019),
   ('WFT', 'was', 2020, 2021),
   ('WAS', 'was', 2022, NULL)
-ON CONFLICT (alias_abbr, season_start) DO NOTHING;
+ON CONFLICT (alias_abbr, season_start) DO UPDATE SET
+  team_id = EXCLUDED.team_id,
+  season_end = EXCLUDED.season_end;

@@ -1,0 +1,9 @@
+# Requires Python 3.11 — nfl_data_py pins pandas==1.5.3, which has no
+# prebuilt wheel for Python 3.13+ and fails to build from source there
+# (missing pkg_resources under modern setuptools). Use:
+#   /opt/homebrew/bin/python3.11 -m venv pipeline/.venv
+nfl_data_py==0.3.3
+pandas==1.5.3
+numpy==1.26.4
+psycopg[binary]==3.3.5
+python-dotenv==1.2.3
