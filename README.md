@@ -11,8 +11,9 @@ players and teams. Free data sources only; automated weekly updates.
   Pulls from `nfl_data_py`/nflverse, computes leaders/trends/power
   rankings/Hub Grades, and writes results into Postgres. Runs as a scheduled
   GitHub Actions job, not a persistent server (see architecture note below).
-- **`db/`** — SQL schema/migrations shared between the pipeline and web app
-  (not yet built).
+- **`db/`** — SQL schema/migrations + static seed data, applied via plain
+  `psql` (no ORM). See `db/README.md` for local setup and the full schema
+  overview.
 
 ## Architecture decisions (locked in with the project owner)
 
@@ -43,8 +44,12 @@ players and teams. Free data sources only; automated weekly updates.
 
 1. **[done]** Scaffold Next.js app: dark/monospace theme, global layout/nav,
    Cmd+K command palette, placeholder pages for all sections.
-2. Postgres schema (players, teams, games, weekly stats, snap counts/usage,
-   betting odds, computed rankings, Hub Grades).
+2. **[done]** Postgres schema (players, teams, games, weekly stats, snap
+   counts/usage, betting odds, injury reports, power rankings, Super Bowl
+   odds, Hub Grades, trend snapshots, a generic computed-payload cache) —
+   see `db/README.md`. Applied and validated against a local Postgres
+   instance (32 teams seeded, FK/CHECK constraints and cross-table joins
+   confirmed working); not yet pointed at a real Neon project.
 3. `nfl_data_py` ingestion pipeline (historical + current season: stats,
    rosters, snap counts, schedules).
 4. Season Stats Leaders page (filters + trending arrows), Player Pages, Team
@@ -59,6 +64,13 @@ players and teams. Free data sources only; automated weekly updates.
 ## Development
 
 ```bash
+# Database (see db/README.md for full detail)
+createdb footballfocus_dev
+export DATABASE_URL="postgres://$(whoami)@localhost:5432/footballfocus_dev"
+./db/migrate.sh
+./db/seed.sh
+
+# Web app
 cd web
 npm install
 npm run dev
