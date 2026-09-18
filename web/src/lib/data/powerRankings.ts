@@ -53,3 +53,26 @@ export async function getLatestPowerRankings(season: number): Promise<PowerRanki
     strengthOfScheduleZ: toNum(r.strengthOfScheduleZ),
   }));
 }
+
+export interface TeamRankingPoint {
+  week: number;
+  rank: number;
+  compositeScore: number;
+}
+
+/** A team's rank/composite score for every week computed so far this
+ * season — lets the Team page show a trend arrow using the same
+ * computeTrendFromSeries module as everywhere else, applied to composite
+ * score instead of a raw stat. */
+export async function getTeamPowerRankingHistory(teamId: string, season: number): Promise<TeamRankingPoint[]> {
+  const rows = await query<{ week: number; rank: number; compositeScore: string }>(
+    `
+    SELECT week, rank, composite_score::text AS "compositeScore"
+    FROM power_rankings
+    WHERE team_id = $1 AND season = $2
+    ORDER BY week ASC
+    `,
+    [teamId, season]
+  );
+  return rows.map((r) => ({ ...r, compositeScore: Number(r.compositeScore) }));
+}

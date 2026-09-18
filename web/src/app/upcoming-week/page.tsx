@@ -3,6 +3,7 @@ import { PlayerLink } from "@/components/PlayerLink";
 import { TeamBadge } from "@/components/TeamBadge";
 import { ComingSoon } from "@/components/ComingSoon";
 import { getUpcomingWeek, getUpcomingGames, getUpcomingInjuries, getUpcomingOdds } from "@/lib/data/upcomingWeek";
+import { getLatestPowerRankings } from "@/lib/data/powerRankings";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,13 @@ export default async function UpcomingWeekPage() {
   }
 
   const { season, week } = upcoming;
-  const [games, injuries, odds] = await Promise.all([
+  const [games, injuries, odds, powerRankings] = await Promise.all([
     getUpcomingGames(season, week),
     getUpcomingInjuries(season, week),
     getUpcomingOdds(season, week),
+    getLatestPowerRankings(season),
   ]);
+  const rankByTeam = new Map(powerRankings.map((r) => [r.teamId, r.rank]));
 
   const injuriesByTeam = new Map<string, typeof injuries>();
   for (const inj of injuries) {
@@ -70,8 +73,7 @@ export default async function UpcomingWeekPage() {
           </ul>
           {odds.size === 0 && (
             <p className="mt-2 text-[11px] text-[var(--muted)]">
-              Win probability needs an Odds API key (see pipeline/README.md) or the step-6
-              power-ranking model — not yet configured.
+              Win probability needs an Odds API key (see pipeline/README.md) — not yet configured.
             </p>
           )}
         </section>
@@ -80,14 +82,44 @@ export default async function UpcomingWeekPage() {
           <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
             Projected Fantasy Leaders
           </h2>
-          <ComingSoon phase="build step 6+ (needs a projection model)" />
+          <ComingSoon phase="a future enhancement (needs a per-player projection model)" />
         </section>
 
         <section>
           <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
             Strength of Matchup
           </h2>
-          <ComingSoon phase="build step 6 (needs the power-ranking model)" />
+          {rankByTeam.size === 0 ? (
+            <ComingSoon phase="run pipeline.run_compute --only power_rankings for this season" />
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {games.map((g) => {
+                const homeRank = rankByTeam.get(g.homeTeamId);
+                const awayRank = rankByTeam.get(g.awayTeamId);
+                return (
+                  <li key={g.gameId} className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <TeamBadge teamId={g.awayTeamId} size="sm" />
+                      <span className="text-xs text-[var(--muted)]">
+                        {awayRank ? `#${awayRank}` : "—"}
+                      </span>
+                      <span className="text-[var(--muted)]">@</span>
+                      <TeamBadge teamId={g.homeTeamId} size="sm" />
+                      <span className="text-xs text-[var(--muted)]">
+                        {homeRank ? `#${homeRank}` : "—"}
+                      </span>
+                    </span>
+                    {homeRank && awayRank && (
+                      <span className="text-xs text-[var(--muted)]">
+                        {Math.abs(homeRank - awayRank) <= 4 ? "Close matchup" : "Mismatch"}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="mt-2 text-[11px] text-[var(--muted)]">By overall Power Ranking (see Standings).</p>
         </section>
 
         <section className="sm:col-span-2">

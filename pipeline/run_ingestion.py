@@ -26,7 +26,7 @@ from pipeline.ingest.pbp_derived import ingest_player_pbp_metrics, ingest_team_p
 from pipeline.ingest.players import ingest_players
 from pipeline.ingest.snap_counts import ingest_snap_counts
 from pipeline.ingest.team_stats import ingest_team_weekly_stats_basic
-from pipeline.ingest.weekly_stats import ingest_player_weekly_stats
+from pipeline.ingest.weekly_stats import fetch_weekly_stats, ingest_player_weekly_stats
 from pipeline.teams import build_team_resolver
 
 STEPS = ["players", "games", "team_stats", "weekly_stats", "snap_counts", "injuries", "pbp_metrics", "odds"]
@@ -39,24 +39,21 @@ def _timed(label, fn):
 
 
 def _run_weekly_stats(conn, resolve_team, seasons):
-    """nflverse publishes player_stats/NGS releases with a lag after
-    schedules — a brand-new or just-started season can have full schedule
-    data but no weekly box scores yet. Each fetch below is independently
-    optional so a missing one degrades gracefully instead of aborting the
-    whole run (and any already-committed steps stay committed)."""
-    print("Fetching import_weekly_data()...")
+    """Box scores come from nflverse's stats_player release directly (see
+    weekly_stats.py's docstring for why not nfl_data_py's
+    import_weekly_data()). NGS rushing still goes through nfl_data_py,
+    since that source wasn't affected by the same rename. A brand-new or
+    just-started season can still lack a stats_player_week file briefly
+    right after games are played, so this stays optional rather than
+    aborting the whole run."""
+    print("Fetching weekly player stats (stats_player_week)...")
     try:
-        weekly_df = nfl.import_weekly_data(seasons)
+        weekly_df = fetch_weekly_stats(seasons)
     except Exception as e:
-        print(f"  [weekly_stats] player_stats unavailable for {seasons}: {e}")
+        print(f"  [weekly_stats] stats_player_week unavailable for {seasons}: {e}")
         return
 
-    print("Fetching NGS passing/rushing...")
-    try:
-        ngs_passing_df = nfl.import_ngs_data(stat_type="passing", years=seasons)
-    except Exception as e:
-        print(f"  [weekly_stats] NGS passing unavailable for {seasons}: {e}")
-        ngs_passing_df = weekly_df.iloc[0:0]
+    print("Fetching NGS rushing...")
     try:
         ngs_rushing_df = nfl.import_ngs_data(stat_type="rushing", years=seasons)
     except Exception as e:
@@ -65,7 +62,7 @@ def _run_weekly_stats(conn, resolve_team, seasons):
 
     _timed(
         "player_weekly_stats",
-        lambda: ingest_player_weekly_stats(conn, resolve_team, weekly_df, ngs_passing_df, ngs_rushing_df),
+        lambda: ingest_player_weekly_stats(conn, resolve_team, weekly_df, ngs_rushing_df),
     )
     conn.commit()
 

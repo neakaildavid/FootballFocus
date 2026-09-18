@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 
 export interface RosterEntry {
   id: string;
@@ -54,4 +54,42 @@ export async function getTeamSchedule(teamId: string, season: number): Promise<T
     `,
     [teamId, season]
   );
+}
+
+export interface OffensiveTendencies {
+  pointsPerGame: number;
+  yardsPerPlay: number;
+  epaPerPlay: number;
+  passRate: number;
+  redzoneEfficiency: number | null;
+}
+
+export async function getOffensiveTendencies(teamId: string, season: number): Promise<OffensiveTendencies | null> {
+  const row = await queryOne<{
+    pointsPerGame: string | null;
+    yardsPerPlay: string | null;
+    epaPerPlay: string | null;
+    passRate: string | null;
+    redzoneEfficiency: string | null;
+  }>(
+    `
+    SELECT
+      avg(points_for)::text AS "pointsPerGame",
+      (sum(yards_offense)::numeric / nullif(sum(plays_offense), 0))::text AS "yardsPerPlay",
+      avg(epa_per_play_offense)::text AS "epaPerPlay",
+      avg(pass_rate)::text AS "passRate",
+      (sum(redzone_tds)::numeric / nullif(sum(redzone_trips), 0))::text AS "redzoneEfficiency"
+    FROM team_weekly_stats
+    WHERE team_id = $1 AND season = $2 AND season_type = 'REG'
+    `,
+    [teamId, season]
+  );
+  if (!row || row.pointsPerGame == null) return null;
+  return {
+    pointsPerGame: Number(row.pointsPerGame),
+    yardsPerPlay: Number(row.yardsPerPlay),
+    epaPerPlay: Number(row.epaPerPlay),
+    passRate: Number(row.passRate),
+    redzoneEfficiency: row.redzoneEfficiency != null ? Number(row.redzoneEfficiency) : null,
+  };
 }

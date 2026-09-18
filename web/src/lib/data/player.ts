@@ -126,3 +126,16 @@ export async function getPlayerPageData(playerId: string, position: string): Pro
     primaryStatLabel: primaryStatKey ? STAT_LABELS[primaryStatKey] : null,
   };
 }
+
+export interface HubGradePoint {
+  week: number;
+  grade: number;
+}
+
+export async function getPlayerHubGradeHistory(playerId: string, season: number): Promise<HubGradePoint[]> {
+  const rows = await query<{ week: number; grade: string }>(
+    `SELECT week, grade::text AS grade FROM hub_grades WHERE player_id = $1 AND season = $2 ORDER BY week ASC`,
+    [playerId, season]
+  );
+  return rows.map((r) => ({ week: r.week, grade: Number(r.grade) }));
+}

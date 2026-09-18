@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getTeam } from "@/lib/teams";
-import { getTeamRoster, getTeamSchedule } from "@/lib/data/team";
+import { getTeamRoster, getTeamSchedule, getOffensiveTendencies } from "@/lib/data/team";
+import { getTeamPowerRankingHistory } from "@/lib/data/powerRankings";
 import { getLatestStatsSeason } from "@/lib/data/season";
+import { computeTrendFromSeries } from "@/lib/trend";
 import { PlayerLink } from "@/components/PlayerLink";
 import { TeamBadge } from "@/components/TeamBadge";
-import { ComingSoon } from "@/components/ComingSoon";
+import { TrendArrow } from "@/components/TrendArrow";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +21,14 @@ export default async function TeamPage({
   if (!team) notFound();
 
   const season = await getLatestStatsSeason();
-  const [roster, schedule] = await Promise.all([
+  const [roster, schedule, tendencies, rankingHistory] = await Promise.all([
     getTeamRoster(team.id, season),
     getTeamSchedule(team.id, season),
+    getOffensiveTendencies(team.id, season),
+    getTeamPowerRankingHistory(team.id, season),
   ]);
+  const latestRanking = rankingHistory[rankingHistory.length - 1] ?? null;
+  const rankingTrend = computeTrendFromSeries(rankingHistory.map((r) => r.compositeScore), 3);
 
   const glowVars = {
     "--glow-strong": `${team.color}90`,
@@ -74,7 +81,22 @@ export default async function TeamPage({
           <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
             Offensive Tendencies
           </h2>
-          <ComingSoon phase="build step 6 (needs play-by-play aggregation)" />
+          {tendencies ? (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+              <TendencyStat label="Points/Game" value={tendencies.pointsPerGame.toFixed(1)} />
+              <TendencyStat label="Yards/Play" value={tendencies.yardsPerPlay.toFixed(2)} />
+              <TendencyStat label="EPA/Play" value={tendencies.epaPerPlay.toFixed(3)} />
+              <TendencyStat label="Pass Rate" value={`${Math.round(tendencies.passRate * 100)}%`} />
+              {tendencies.redzoneEfficiency != null && (
+                <TendencyStat
+                  label="Red Zone TD%"
+                  value={`${Math.round(tendencies.redzoneEfficiency * 100)}%`}
+                />
+              )}
+            </dl>
+          ) : (
+            <p className="text-sm text-[var(--muted)]">No offensive data on record for this team yet.</p>
+          )}
         </section>
 
         <section>
@@ -120,11 +142,33 @@ export default async function TeamPage({
 
         <section>
           <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
-            Power Ranking & Trend
+            Power Ranking &amp; Trend
           </h2>
-          <ComingSoon phase="build step 6" />
+          {latestRanking ? (
+            <p className="text-sm">
+              <Link href="/standings" className="underline decoration-[var(--border)] underline-offset-4">
+                #{latestRanking.rank}
+              </Link>{" "}
+              overall
+              <TrendArrow direction={rankingTrend.direction} />
+              <span className="ml-2 text-xs text-[var(--muted)]">
+                score {latestRanking.compositeScore.toFixed(2)}
+              </span>
+            </p>
+          ) : (
+            <p className="text-sm text-[var(--muted)]">No power ranking computed for this team yet.</p>
+          )}
         </section>
       </div>
+    </div>
+  );
+}
+
+function TendencyStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between border-b border-[var(--border)]/60 py-1">
+      <dt className="text-[var(--muted)]">{label}</dt>
+      <dd className="tabular-nums">{value}</dd>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPlayerProfile, getPlayerPageData } from "@/lib/data/player";
+import { getPlayerProfile, getPlayerPageData, getPlayerHubGradeHistory } from "@/lib/data/player";
 import { getHistoricalComparison } from "@/lib/data/historical";
 import { getTeam } from "@/lib/teams";
 import { TeamBadge } from "@/components/TeamBadge";
@@ -27,6 +27,7 @@ export default async function PlayerPage({
     season && lastWeek
       ? await getHistoricalComparison(playerId, profile.position, season, lastWeek)
       : null;
+  const hubGradeHistory = season ? await getPlayerHubGradeHistory(playerId, season) : [];
 
   return (
     <div>
@@ -98,14 +99,31 @@ export default async function PlayerPage({
             <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
               Hub Grade History
             </h2>
-            <ComingSoon phase="build step 5" />
+            {hubGradeHistory.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">
+                Not enough qualifying volume this season to compute a grade.
+              </p>
+            ) : (
+              <ul className="flex flex-wrap gap-1.5">
+                {hubGradeHistory.map((h) => (
+                  <li
+                    key={h.week}
+                    title={`Week ${h.week}: ${h.grade.toFixed(1)}`}
+                    className="flex h-9 w-9 flex-col items-center justify-center rounded border border-[var(--border)] text-[10px]"
+                  >
+                    <span className="text-[var(--muted)]">{h.week}</span>
+                    <span className="tabular-nums font-semibold">{Math.round(h.grade)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section>
             <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
               Upcoming Matchup Context
             </h2>
-            <ComingSoon phase="build step 5" />
+            <ComingSoon phase="a future enhancement (needs the player's next scheduled game + opponent defensive context)" />
           </section>
         </div>
       )}
