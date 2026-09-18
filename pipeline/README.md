@@ -138,11 +138,21 @@ table remains unused by design, not because it's still pending.
   grades landed with mean ≈50, stddev ≈13, range 0-100 as designed; the
   Super Bowl LIX top grades were Eagles skill players (Hurts, Goedert,
   Smith, Brown) plus Kareem Hunt, consistent with Philadelphia's 40-22 win.
-  Note it's an *efficiency* grade, not a volume grade — a low-target,
-  high-YPT WR game can outscore a high-volume compiler day; this is
-  intentional (see the README's positioning of Focus Grade as "not just
-  repackaged counting stats"), but worth explaining in the UI so it
-  doesn't read as a bug.
+
+  **v2 (current)**: blends `epa_total` (total EPA added — NOT divided by
+  touches) alongside the original `epa_per_play` rate. v1 was pure
+  per-play efficiency with zero volume weighting, which meant a 2-target,
+  one-big-play game could out-grade a 12-target workhorse day — technically
+  correct for "highest per-play efficiency" but not what a single overall
+  grade should feel like. `epa_total` fixes this because it's literally
+  `epa_per_play × touches`: same efficiency, more touches, more total
+  value, higher grade. Re-verified after the change: real monster-volume
+  games (Ja'Marr Chase 12 targets/193 yards/2 TD, Drake London 13/154/1,
+  Joe Burrow 392 yards/5 TD) now grade prominently, where under v1 they
+  were often buried below tiny-sample big plays. A 2-3 touch deep-shot
+  game can still occasionally top the list — that's not a bug, three
+  genuinely explosive plays can create more total value than twelve short
+  ones — but it's no longer the *only* way to grade highly.
 - **Odds** (`pipeline/ingest/odds.py`, `pipeline/odds_math.py`) matches
   The Odds API's full team names (`"Kansas City Chiefs"`) against our
   `teams` table's `city || ' ' || name`, and locates the matching game by

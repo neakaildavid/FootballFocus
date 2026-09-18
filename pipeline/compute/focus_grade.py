@@ -1,13 +1,20 @@
-"""Computes the Focus Grade: our own 0-100 offensive efficiency grade per
-player per game — explicitly not PFF's, and not just a repackaging of
-counting stats. A QB who throws for 180 efficient yards on a good team
-should out-grade one who padded garbage-time yardage in a blowout loss.
+"""Computes the Focus Grade: our own 0-100 offensive efficiency-and-production
+grade per player per game — explicitly not PFF's, and not just a
+repackaging of counting stats.
 
 Methodology
 -----------
-For each qualifying player-game, up to four components are computed:
+For each qualifying player-game, up to six components are computed:
 
-  - epa_per_play: (passing_epa + rushing_epa + receiving_epa) / touches
+  - epa_total: passing_epa + rushing_epa + receiving_epa (NOT divided by
+    touches) — total value added this game. This is the primary driver of
+    the grade, and it inherently rewards volume together with efficiency:
+    a player who is both good per-play AND gets a lot of touches
+    accumulates more total value than either alone would produce. This is
+    what a pure per-play rate stat can't capture (see below).
+  - epa_per_play: epa_total / touches — the old (and until now, only) EPA
+    component, kept as a secondary factor so an efficient player on
+    limited volume still earns some credit, just not the largest share.
   - success_rate: from pbp_derived.py (share of their snaps that were
     "successful" plays by nflverse's own EPA-based definition)
   - cpoe: completion % over expected (QBs only; from Next Gen Stats)
@@ -23,6 +30,17 @@ player-row, e.g. a WR has no CPOE, is simply excluded and the remaining
 weights renormalized — no player is penalized for a component that
 doesn't apply to their position). The composite maps onto a 0-100 scale
 centered at 50: grade = clip(50 + 15 * composite_z, 0, 100).
+
+Why epa_total was added (2nd design, replacing a pure-efficiency v1):
+the original version weighted epa_per_play at 40-45% and had no volume
+component at all, so a player with 2 touches and one huge play could
+out-grade a workhorse who produced all game on 15+ touches — mathematically
+correct for "highest per-play efficiency" but not what anyone actually
+wants from a single overall grade. epa_total fixes this because it's
+literally epa_per_play multiplied by touches: same efficiency, more
+touches, higher total value, higher grade — while epa_per_play staying in
+the blend (at a reduced weight) still lets a highly efficient low-volume
+game earn a good, just not dominant, grade.
 
 A minimum-volume gate (MIN_VOLUME) skips grading a player-game with too
 few touches to be meaningful (e.g. a WR's single garbage-time target)
@@ -46,13 +64,29 @@ MIN_VOLUME = {"QB": 5, "RB": 3, "FB": 3, "WR": 2, "TE": 2}
 # component -> weight, per position. Missing components for a position
 # (e.g. WR has no cpoe/yac_over_expected) are simply absent from its dict;
 # weights need not sum to 1 here since they're renormalized per-row over
-# whichever components are actually non-null for that player-game.
+# whichever components are actually non-null for that player-game (they do
+# sum to 1.00 in the base case below, for readability).
 WEIGHTS = {
-    "QB": {"epa_per_play": 0.40, "success_rate": 0.25, "cpoe": 0.25, "redzone_td_rate": 0.10},
-    "RB": {"epa_per_play": 0.35, "success_rate": 0.30, "yac_over_expected": 0.20, "redzone_td_rate": 0.15},
-    "FB": {"epa_per_play": 0.35, "success_rate": 0.30, "yac_over_expected": 0.20, "redzone_td_rate": 0.15},
-    "WR": {"epa_per_play": 0.45, "success_rate": 0.30, "redzone_td_rate": 0.25},
-    "TE": {"epa_per_play": 0.45, "success_rate": 0.30, "redzone_td_rate": 0.25},
+    "QB": {
+        "epa_total": 0.35, "epa_per_play": 0.15, "success_rate": 0.20,
+        "cpoe": 0.20, "redzone_td_rate": 0.10,
+    },
+    "RB": {
+        "epa_total": 0.30, "epa_per_play": 0.15, "success_rate": 0.20,
+        "yac_over_expected": 0.20, "redzone_td_rate": 0.15,
+    },
+    "FB": {
+        "epa_total": 0.30, "epa_per_play": 0.15, "success_rate": 0.20,
+        "yac_over_expected": 0.20, "redzone_td_rate": 0.15,
+    },
+    "WR": {
+        "epa_total": 0.35, "epa_per_play": 0.20, "success_rate": 0.20,
+        "redzone_td_rate": 0.25,
+    },
+    "TE": {
+        "epa_total": 0.35, "epa_per_play": 0.20, "success_rate": 0.20,
+        "redzone_td_rate": 0.25,
+    },
 }
 
 GRADE_CENTER = 50
@@ -92,8 +126,8 @@ def _add_components(df: pd.DataFrame) -> pd.DataFrame:
     touches = df["pass_attempts"].fillna(0) + df["carries"].fillna(0) + df["targets"].fillna(0)
     df["touches"] = touches
 
-    total_epa = df["passing_epa"].fillna(0) + df["rushing_epa"].fillna(0) + df["receiving_epa"].fillna(0)
-    df["epa_per_play"] = np.where(touches > 0, total_epa / touches.replace(0, np.nan), np.nan)
+    df["epa_total"] = df["passing_epa"].fillna(0) + df["rushing_epa"].fillna(0) + df["receiving_epa"].fillna(0)
+    df["epa_per_play"] = np.where(touches > 0, df["epa_total"] / touches.replace(0, np.nan), np.nan)
 
     redzone_touches = df["redzone_targets"].fillna(0) + df["redzone_carries"].fillna(0)
     df["redzone_td_rate"] = np.where(
@@ -123,7 +157,7 @@ def compute_focus_grades(conn, season: int) -> pd.DataFrame:
         return df
 
     z_cols = {}
-    for component in ("epa_per_play", "success_rate", "cpoe", "yac_over_expected", "redzone_td_rate"):
+    for component in ("epa_total", "epa_per_play", "success_rate", "cpoe", "yac_over_expected", "redzone_td_rate"):
         df[f"z_{component}"] = _zscore_within_week(df, component)
         z_cols[component] = f"z_{component}"
 
@@ -144,11 +178,13 @@ def compute_focus_grades(conn, season: int) -> pd.DataFrame:
     return df[
         [
             "player_id", "game_id", "season", "week", "grade",
-            "z_epa_per_play", "z_success_rate", "z_cpoe", "z_yac_over_expected", "z_redzone_td_rate",
+            "z_epa_total", "z_epa_per_play", "z_success_rate", "z_cpoe",
+            "z_yac_over_expected", "z_redzone_td_rate",
         ]
     ].rename(
         columns={
-            "z_epa_per_play": "epa_component",
+            "z_epa_total": "epa_total_component",
+            "z_epa_per_play": "epa_rate_component",
             "z_success_rate": "success_rate_component",
             "z_cpoe": "cpoe_component",
             "z_yac_over_expected": "yac_oe_component",
