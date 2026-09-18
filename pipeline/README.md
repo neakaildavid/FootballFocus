@@ -43,8 +43,8 @@ python -m pipeline.run_ingestion --seasons 2025
 # upcoming (not-yet-played) games — safe to skip if you don't have one yet.
 python -m pipeline.run_ingestion --seasons 2025 --skip players games team_stats weekly_stats snap_counts injuries pbp_metrics
 
-# Derived-metric computation (Hub Grade, and eventually trend snapshots /
-# power rankings) is a separate CLI, run after ingestion for that season:
+# Derived-metric computation (Hub Grade, Power Rankings, Super Bowl odds)
+# is a separate CLI, run after ingestion for that season:
 python -m pipeline.run_compute --season 2024
 ```
 
@@ -54,6 +54,19 @@ each commits independently, so a later step failing doesn't roll back
 earlier ones. `--skip STEP...` skips DB writes for steps you've already run
 this session; it still fetches whatever those steps' data feeds downstream.
 
+**Current dev DB state:** seasons 2015-2024 have `players`/`games`/
+`weekly_stats` (2016-2023 backfilled in build step 7 specifically so
+Historical Comparison has more than 2 seasons to compare against); only
+2015 and 2024 have the heavier `snap_counts`/`pbp_metrics` steps run
+against them. 2025/2026 have schedules only (nflverse hasn't published
+those seasons' player_stats yet — see the weekly_stats step's graceful
+skip). Trend detection (Usage Trends, Breakout Tracker, and Season
+Leaders' arrows) ended up as **live SQL queries in the web app**
+(`web/src/lib/data/*` + `web/src/lib/trend.ts`), not a
+`trend_snapshots`-populating pipeline step — a per-player/per-week
+recent-vs-baseline lookup is cheap enough to compute on read, so that
+table remains unused by design, not because it's still pending.
+
 ## What's in scope here vs. deferred
 
 | Column | Status |
@@ -61,7 +74,7 @@ this session; it still fetches whatever those steps' data feeds downstream.
 | `player_weekly_stats`: passing/rushing/receiving box score, EPA, fantasy points, CPOE, rush yards over expected, target/carry share | ✅ step 3, `weekly_stats.py` |
 | `player_weekly_stats`: `offense_snaps`, `offense_snap_pct` | ✅ step 3, `snap_counts.py` |
 | `player_weekly_stats`: `success_rate`, `redzone_targets/carries/tds` | ✅ step 5, `pbp_derived.py` (play-by-play — see below) |
-| `player_weekly_stats`: `route_participation` | ⏳ needs FTN charting data — step 7 |
+| `player_weekly_stats`: `route_participation` | ❌ not available from free sources — checked `import_ftn_data()` directly in step 7; it has play-level charting (motion, play action, blitzers) but no per-player route data. Column stays NULL indefinitely, not "pending" |
 | `games`, basic `team_weekly_stats` (points, W/L/T) | ✅ step 3, `games.py` / `team_stats.py` |
 | `team_weekly_stats`: EPA/play, yards/play, red zone, turnovers, pass/rush rate | ✅ step 5, `pbp_derived.py` (built for Hub Grade, but populated here since Power Rankings, step 6, needs the same pbp pull — no reason to fetch that ~50k-row/season dataset twice) |
 | `injury_reports` | ✅ step 3, `injuries.py` |
@@ -69,7 +82,7 @@ this session; it still fetches whatever those steps' data feeds downstream.
 | `betting_odds` | ⏳ needs `ODDS_API_KEY` (`pipeline/ingest/odds.py`, ready to run — not yet exercised against the live API in this environment, only against a synthetic payload matching the documented response shape). Only ever returns *upcoming* odds — `import_schedules()` already carries real historical moneyline/spread/total for free, a bonus noted in `games.py`'s docstring |
 | `power_rankings` | ✅ step 6, `pipeline/compute/power_rankings.py` |
 | `super_bowl_odds` | ✅ step 6, `pipeline/compute/super_bowl_odds.py` (reads the latest `power_rankings` row — run after it) |
-| `trend_snapshots` | ⏳ step 7 |
+| `trend_snapshots` | ⚪ unused by design — step 7's trend detection (Usage Trends, Breakout Tracker) ended up as live queries instead; see the "Current dev DB state" note above |
 
 ## Design notes worth knowing before extending this
 

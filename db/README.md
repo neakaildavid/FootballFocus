@@ -63,5 +63,5 @@ files not yet recorded in `schema_migrations`, in filename order.
 | `power_rankings` | 1 row / team / week | Composite score + every component z-score, for an auditable formula |
 | `super_bowl_odds` | 1 row / team / week | Derived from power rankings + remaining SoS + seeding |
 | `hub_grades` | 1 row / player / game | Our own 0-100 offensive efficiency grade (not PFF's) |
-| `trend_snapshots` | 1 row / entity / stat / window | One generalized trend-detection table backing every trending-arrow surface (Leaders, Usage Trends, Breakout Tracker) |
+| `trend_snapshots` | 1 row / entity / stat / window | Designed to back every trending-arrow surface, but unused in practice — Leaders/Usage Trends/Breakout Tracker (build steps 4 and 7) compute trends as live queries instead (see `web/src/lib/trend.ts`), since a per-player/per-week recent-vs-baseline lookup is cheap enough on read. Kept in the schema in case a future caching pass wants to persist these instead of recomputing every request |
 | `computed_cache` | 1 row / cache key | Pre-assembled JSON page payloads, recomputed by the scheduled jobs instead of per-request |

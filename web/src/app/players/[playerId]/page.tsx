@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPlayerProfile, getPlayerPageData } from "@/lib/data/player";
+import { getHistoricalComparison } from "@/lib/data/historical";
 import { getTeam } from "@/lib/teams";
 import { TeamBadge } from "@/components/TeamBadge";
 import { TrendArrow } from "@/components/TrendArrow";
@@ -21,6 +22,11 @@ export default async function PlayerPage({
     profile.position
   );
   const team = profile.teamId ? getTeam(profile.teamId) : null;
+  const lastWeek = gameLog.length > 0 ? gameLog[gameLog.length - 1].week : null;
+  const historical =
+    season && lastWeek
+      ? await getHistoricalComparison(playerId, profile.position, season, lastWeek)
+      : null;
 
   return (
     <div>
@@ -61,6 +67,26 @@ export default async function PlayerPage({
             )}
           </section>
 
+          {historical && (
+            <section className="sm:col-span-2">
+              <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
+                Historical Comparison
+              </h2>
+              <p className="text-sm">
+                {historical.value.toLocaleString()} {historical.statLabel} through Week{" "}
+                {historical.throughWeek} is the{" "}
+                <span className="font-semibold">{ordinal(historical.rank)}</span>-most by any{" "}
+                {profile.position} through Week {historical.throughWeek} since{" "}
+                {historical.sinceSeason}
+                <span className="text-xs text-[var(--muted)]">
+                  {" "}
+                  (out of {historical.totalPlayerSeasons} qualifying player-seasons)
+                </span>
+                .
+              </p>
+            </section>
+          )}
+
           <section className="sm:col-span-2">
             <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
               {season} Game-by-Game Log
@@ -85,6 +111,21 @@ export default async function PlayerPage({
       )}
     </div>
   );
+}
+
+function ordinal(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
 }
 
 function StatLine({ position, totals }: { position: string; totals: Record<string, number> }) {

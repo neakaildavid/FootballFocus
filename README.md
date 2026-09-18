@@ -146,7 +146,37 @@ players and teams. Free data sources only; automated weekly updates.
    filtering standings to `season_type = 'REG'` — Power Rankings correctly
    keeps including the postseason, since "how good is this team" and
    "what's their seeding record" are different questions.
-7. Snap Count/Usage Trends, Rookie/Breakout Tracker, Historical Comparison.
+7. **[done]** Snap Count/Usage Trends, Rookie/Breakout Tracker, Historical
+   Comparison. Backfilled seasons 2016-2023 (weekly stats + NGS only, not
+   the heavier snap counts/injuries/play-by-play) to fill the gap between
+   the 2015 and 2024 seasons already ingested — giving 10 consecutive
+   seasons (2015-2024) of real data, which Historical Comparison
+   specifically needed to be meaningful. Verified the backfill against a
+   pinpoint-known fact: Mahomes' 2018 MVP season came back as exactly
+   5,097 passing yards and 50 TDs, his actual real career numbers that
+   year.
+
+   Usage Trends and the Breakout Tracker both reuse `computeTrendFromSeries`
+   (the same recent-3-vs-baseline z-score module built for Season Leaders
+   in step 4) rather than inventing new trend logic — Usage Trends applies
+   it to snap share/target share/carry share, the Breakout Tracker applies
+   it to PPR fantasy points for rookies and second-year players only.
+   Historical Comparison is a live query (a window-function cumulative
+   rank through the same week-of-season across every ingested year), shown
+   as a caption on the Player page ("Nth-most \<stat\> through Week W
+   since 2015"), not a precomputed pipeline step — it's a per-player
+   lookup, not a model.
+
+   Route participation is **not** included in Usage Trends and is not
+   expected to be added later either: checked nflverse's free FTN charting
+   data directly, and it covers play-level context (motion, play action,
+   blitzer counts) but not per-player routes run — genuinely unavailable
+   from the free data sources this project uses, not just deferred.
+
+   Verified against real outcomes: the Breakout Tracker's top-ranked
+   player was Michael Penix Jr., the real Falcons rookie QB who actually
+   took over the starting job late in the 2024 season — exactly the
+   "breakout" story this feature is meant to surface.
 8. Tuesday cron (GitHub Actions) + lighter frequent stat-refresh job.
 9. Polish: glow effects, hover states, mobile responsiveness, loading
    states, command palette shortcuts.
