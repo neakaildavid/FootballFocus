@@ -65,3 +65,20 @@ export const TEAMS_BY_ID: Record<string, Team> = Object.fromEntries(
 export function getTeam(id: string): Team | undefined {
   return TEAMS_BY_ID[id.toLowerCase()];
 }
+
+// ESPN's CDN, the same logo source nflverse's own import_team_desc()
+// points to (team_logo_espn column) — verified directly against that
+// dataset rather than assumed, since two teams don't follow the plain
+// "id.png" pattern: Washington's asset is keyed "wsh" not "was", and
+// Carolina's default logo doesn't read well on a dark background, so
+// ESPN publishes a dedicated "500-dark" variant for it. Hotlinked, not
+// downloaded/rehosted — same "use the public, community-standard source"
+// approach as every other data source in this project.
+const LOGO_ABBR_OVERRIDES: Record<string, string> = { was: "wsh" };
+const LOGO_VARIANT_OVERRIDES: Record<string, string> = { car: "500-dark" };
+
+export function getTeamLogoUrl(id: string): string {
+  const abbr = LOGO_ABBR_OVERRIDES[id] ?? id;
+  const variant = LOGO_VARIANT_OVERRIDES[id] ?? "500";
+  return `https://a.espncdn.com/i/teamlogos/nfl/${variant}/${abbr}.png`;
+}

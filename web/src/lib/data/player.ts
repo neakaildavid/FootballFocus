@@ -127,14 +127,14 @@ export async function getPlayerPageData(playerId: string, position: string): Pro
   };
 }
 
-export interface HubGradePoint {
+export interface FocusGradePoint {
   week: number;
   grade: number;
 }
 
-export async function getPlayerHubGradeHistory(playerId: string, season: number): Promise<HubGradePoint[]> {
+export async function getPlayerFocusGradeHistory(playerId: string, season: number): Promise<FocusGradePoint[]> {
   const rows = await query<{ week: number; grade: string }>(
-    `SELECT week, grade::text AS grade FROM hub_grades WHERE player_id = $1 AND season = $2 ORDER BY week ASC`,
+    `SELECT week, grade::text AS grade FROM focus_grades WHERE player_id = $1 AND season = $2 ORDER BY week ASC`,
     [playerId, season]
   );
   return rows.map((r) => ({ week: r.week, grade: Number(r.grade) }));

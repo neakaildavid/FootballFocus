@@ -1,25 +1,32 @@
 import Link from "next/link";
+import Image from "next/image";
 import { CSSProperties } from "react";
-import { getTeam } from "@/lib/teams";
+import { getTeam, getTeamLogoUrl } from "@/lib/teams";
 import { rgba } from "@/lib/color";
 
 export function TeamBadge({ teamId, size = "sm" }: { teamId: string; size?: "sm" | "md" }) {
   const team = getTeam(teamId);
   if (!team) return null;
-  const dims = size === "sm" ? "h-5 w-5 text-[10px]" : "h-8 w-8 text-xs";
+  const px = size === "sm" ? 24 : 40;
   const glowVars = {
-    "--glow-strong": rgba(team.color, 0.55),
-    "--glow-soft": rgba(team.color, 0.3),
+    "--glow-strong": rgba(team.color, 0.65),
+    "--glow-soft": rgba(team.color, 0.35),
   } as CSSProperties;
 
   return (
     <Link
       href={`/teams/${team.id}`}
       title={`${team.city} ${team.name}`}
-      className={`glow-on-hover inline-flex ${dims} items-center justify-center rounded-full border border-[var(--border)] shrink-0 font-bold`}
-      style={{ color: team.color, ...glowVars }}
+      className="glow-on-hover-logo inline-flex shrink-0 items-center justify-center"
+      style={glowVars}
     >
-      {team.abbr}
+      <Image
+        src={getTeamLogoUrl(team.id)}
+        alt={`${team.city} ${team.name} logo`}
+        width={px}
+        height={px}
+        className="object-contain"
+      />
     </Link>
   );
 }

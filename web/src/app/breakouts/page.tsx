@@ -23,7 +23,7 @@ export default async function BreakoutsPage() {
       ) : (
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--muted)]">
+            <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
               <th className="py-2 pr-3 font-normal">Player</th>
               <th className="py-2 pr-3 font-normal">Team</th>
               <th className="py-2 pr-3 font-normal">Class</th>

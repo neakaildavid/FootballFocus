@@ -13,8 +13,8 @@ export function NavBar() {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-        <Link href="/" className="shrink-0 text-sm font-bold tracking-tight">
-          NFL<span className="text-[var(--muted)]">/</span>OFFENSE
+        <Link href="/" className="shrink-0 text-base font-bold tracking-tight">
+          Football<span className="text-[var(--muted)]"> Focus</span>
         </Link>
 
         <nav className="hidden flex-1 items-center gap-1 overflow-x-auto lg:flex">
@@ -24,9 +24,9 @@ export function NavBar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`whitespace-nowrap rounded px-2.5 py-1.5 text-xs transition-colors ${
+                className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
                   active
-                    ? "text-[var(--foreground)] bg-white/5"
+                    ? "text-[var(--foreground)] bg-white/[0.06]"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
                 }`}
               >
@@ -41,7 +41,7 @@ export function NavBar() {
           <button
             aria-label="Toggle menu"
             onClick={() => setMobileOpen((v) => !v)}
-            className="rounded border border-[var(--border)] px-2 py-1.5 text-xs lg:hidden"
+            className="rounded-lg border border-[var(--border)] px-2.5 py-2 text-sm lg:hidden"
           >
             {mobileOpen ? "✕" : "☰"}
           </button>
@@ -55,7 +55,7 @@ export function NavBar() {
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
-              className="rounded px-2 py-2 text-sm text-[var(--muted)] hover:bg-white/5 hover:text-[var(--foreground)]"
+              className="rounded-lg px-3 py-2.5 text-sm text-[var(--muted)] hover:bg-white/[0.06] hover:text-[var(--foreground)]"
             >
               {item.label}
             </Link>

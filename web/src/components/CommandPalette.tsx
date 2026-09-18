@@ -49,12 +49,12 @@ export function CommandPalette() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Search players and teams"
-        className="glow-on-hover flex items-center gap-2 rounded border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+        className="glow-on-hover flex items-center gap-2 rounded-xl border border-[var(--border)] px-3.5 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
         style={{ "--glow-strong": "rgba(242,241,236,0.25)", "--glow-soft": "rgba(242,241,236,0.12)" } as React.CSSProperties}
       >
         <span aria-hidden>⌕</span>
         <span className="hidden sm:inline">Search players, teams…</span>
-        <kbd className="ml-1 hidden rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] sm:inline">
+        <kbd className="ml-1 hidden rounded-md border border-[var(--border)] px-1.5 py-0.5 text-xs sm:inline">
           ⌘K
         </kbd>
       </button>
@@ -65,24 +65,24 @@ export function CommandPalette() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-lg mx-4 rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
+            className="w-full max-w-lg mx-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <Command shouldFilter={false} className="font-mono">
-              <div className="flex items-center border-b border-[var(--border)] px-3">
+            <Command shouldFilter={false}>
+              <div className="flex items-center border-b border-[var(--border)] px-4">
                 <span className="mr-2 text-[var(--muted)]" aria-hidden>⌕</span>
                 <Command.Input
                   autoFocus
                   value={query}
                   onValueChange={setQuery}
                   placeholder="Jump to a player or team…"
-                  className="w-full bg-transparent py-3 text-sm outline-none placeholder:text-[var(--muted)]"
+                  className="w-full bg-transparent py-3.5 text-base outline-none placeholder:text-[var(--muted)]"
                 />
-                <kbd className="text-[10px] text-[var(--muted)] border border-[var(--border)] rounded px-1.5 py-0.5">
+                <kbd className="text-xs text-[var(--muted)] border border-[var(--border)] rounded-md px-1.5 py-0.5">
                   esc
                 </kbd>
               </div>
-              <Command.List className="max-h-80 overflow-y-auto p-1">
+              <Command.List className="max-h-80 overflow-y-auto p-2">
                 <Command.Empty className="px-3 py-6 text-center text-sm text-[var(--muted)]">
                   No results.
                 </Command.Empty>
@@ -91,7 +91,7 @@ export function CommandPalette() {
                     key={r.id}
                     value={r.id}
                     onSelect={() => go(r.href)}
-                    className="flex cursor-pointer items-center justify-between rounded px-3 py-2 text-sm data-[selected=true]:bg-white/5"
+                    className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-sm data-[selected=true]:bg-white/5"
                   >
                     <span>{r.label}</span>
                     <span className="text-xs text-[var(--muted)]">{r.sub}</span>

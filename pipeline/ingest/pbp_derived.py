@@ -5,7 +5,7 @@ transiently (not stored raw — see the architecture note in the root
 README) and used only to UPDATE rows that games.py/weekly_stats.py already
 created; it inserts nothing itself.
 
-This exists for build step 5 (Hub Grade needs success rate + red zone
+This exists for build step 5 (Focus Grade needs success rate + red zone
 efficiency), but also fills in team_weekly_stats' EPA/success-rate/
 turnover columns that step 6 (Power Rankings) will need — one pbp pull
 serves both rather than fetching this expensive data twice.

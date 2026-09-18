@@ -27,7 +27,7 @@ export default async function StandingsPage() {
         <h2 className="mb-3 text-xs uppercase tracking-wide text-[var(--muted)]">Standings</h2>
         {CONFERENCES.map((conf) => (
           <div key={conf} className="mb-6">
-            <h3 className="mb-2 text-[11px] uppercase tracking-wide text-[var(--muted)]">{conf}</h3>
+            <h3 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">{conf}</h3>
             <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
               {DIVISIONS.map((div) => {
                 const teams = TEAMS.filter((t) => t.conference === conf && t.division === div)
@@ -37,7 +37,7 @@ export default async function StandingsPage() {
                 if (teams.length === 0) return null;
                 return (
                   <div key={div}>
-                    <h4 className="mb-1 text-[10px] uppercase tracking-wide text-[var(--muted)]">{div}</h4>
+                    <h4 className="mb-1 text-xs uppercase tracking-wide text-[var(--muted)]">{div}</h4>
                     <table className="w-full text-xs">
                       <tbody>
                         {teams.map(({ team, s }) => (
@@ -67,14 +67,14 @@ export default async function StandingsPage() {
 
       <section>
         <h2 className="mb-1 text-xs uppercase tracking-wide text-[var(--muted)]">Power Rankings</h2>
-        <p className="mb-3 text-[11px] text-[var(--muted)]">
+        <p className="mb-3 text-xs text-[var(--muted)]">
           Our own weighted composite of season-to-date point differential, offensive/defensive EPA
           per play, net yards per play, red zone efficiency, turnover margin, and strength of
           schedule — each z-scored against the rest of the league. Not a win-loss ranking.
         </p>
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--muted)]">
+            <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
               <th className="py-2 pr-3 font-normal">#</th>
               <th className="py-2 pr-3 font-normal">Team</th>
               <th className="py-2 pr-3 text-right font-normal">Score</th>

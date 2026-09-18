@@ -15,7 +15,7 @@ export async function getLastWeek(season: number): Promise<number | null> {
   return row?.max ?? null;
 }
 
-export interface HubGradeRow {
+export interface FocusGradeRow {
   playerId: string;
   playerName: string;
   position: string;
@@ -23,16 +23,16 @@ export interface HubGradeRow {
   grade: number;
 }
 
-export async function getTopHubGrades(season: number, week: number, limit = 10): Promise<HubGradeRow[]> {
-  const rows = await query<Omit<HubGradeRow, "grade"> & { grade: string }>(
+export async function getTopFocusGrades(season: number, week: number, limit = 10): Promise<FocusGradeRow[]> {
+  const rows = await query<Omit<FocusGradeRow, "grade"> & { grade: string }>(
     `
-    SELECT hg.player_id AS "playerId", p.full_name AS "playerName", p.position,
-           pws.team_id AS "teamId", hg.grade::numeric AS grade
-    FROM hub_grades hg
-    JOIN players p ON p.id = hg.player_id
-    JOIN player_weekly_stats pws ON pws.player_id = hg.player_id AND pws.game_id = hg.game_id
-    WHERE hg.season = $1 AND hg.week = $2
-    ORDER BY hg.grade DESC
+    SELECT fg.player_id AS "playerId", p.full_name AS "playerName", p.position,
+           pws.team_id AS "teamId", fg.grade::numeric AS grade
+    FROM focus_grades fg
+    JOIN players p ON p.id = fg.player_id
+    JOIN player_weekly_stats pws ON pws.player_id = fg.player_id AND pws.game_id = fg.game_id
+    WHERE fg.season = $1 AND fg.week = $2
+    ORDER BY fg.grade DESC
     LIMIT $3
     `,
     [season, week, limit]

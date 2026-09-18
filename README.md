@@ -9,7 +9,7 @@ players and teams. Free data sources only; automated weekly updates.
   Serves pages and read-only API routes, querying Postgres directly.
 - **`pipeline/`** — Python ingestion + stat-computation CLI
   (`nfl_data_py`/nflverse → Postgres): rosters, schedules, weekly stats,
-  snap counts, play-by-play-derived metrics, Hub Grade, Power Rankings,
+  snap counts, play-by-play-derived metrics, Focus Grade, Power Rankings,
   Super Bowl odds, live odds. Runs as a scheduled GitHub Actions job, not a
   persistent server (see architecture note below). See `pipeline/README.md`
   for local setup (needs Python 3.11 specifically) and what's ingested vs.
@@ -34,7 +34,7 @@ players and teams. Free data sources only; automated weekly updates.
     not full play-by-play (which is fetched transiently by the pipeline for
     computation, not stored row-by-row).
 - **Python service:** built as a CLI-driven package (ingestion, stat
-  computation, trend detection, power rankings, Hub Grade — see build order)
+  computation, trend detection, power rankings, Focus Grade — see build order)
   rather than an always-on FastAPI server, since nothing needs to call it
   synchronously — Next.js reads precomputed results straight from Postgres.
   Scheduled via **GitHub Actions** (free), not a paid always-on host. This
@@ -51,7 +51,7 @@ players and teams. Free data sources only; automated weekly updates.
    Cmd+K command palette, placeholder pages for all sections.
 2. **[done]** Postgres schema (players, teams, games, weekly stats, snap
    counts/usage, betting odds, injury reports, power rankings, Super Bowl
-   odds, Hub Grades, trend snapshots, a generic computed-payload cache) —
+   odds, Focus Grades, trend snapshots, a generic computed-payload cache) —
    see `db/README.md`. Applied and validated against a local Postgres
    instance (32 teams seeded, FK/CHECK constraints and cross-table joins
    confirmed working); not yet pointed at a real Neon project.
@@ -88,15 +88,15 @@ players and teams. Free data sources only; automated weekly updates.
    `player_weekly_stats` rows in the latest season instead; and a
    `SELECT DISTINCT ... ORDER BY <expression not in select list>` Postgres
    error in the roster query, fixed with a subquery. Offensive
-   tendencies, Hub Grade, and power ranking sections remain placeholders
+   tendencies, Focus Grade, and power ranking sections remain placeholders
    pending steps 5-6.
-5. **[done]** Hub Grade model, Last Week page, Upcoming Week page (wire in
-   odds). Hub Grade (`pipeline/compute/hub_grade.py`) needed play-by-play
+5. **[done]** Focus Grade model, Last Week page, Upcoming Week page (wire in
+   odds). Focus Grade (`pipeline/compute/focus_grade.py`) needed play-by-play
    for success rate and red zone splits, which step 3 deliberately
    deferred — that pbp pull (`pipeline/ingest/pbp_derived.py`) also
    populates `team_weekly_stats`' EPA/red-zone/turnover columns while it's
    at it, since step 6's Power Rankings needs the same ~50k-row/season
-   pull and there's no reason to fetch it twice. Last Week (Hub Grades,
+   pull and there's no reason to fetch it twice. Last Week (Focus Grades,
    stat leaders, fantasy performances, full scores, notable injuries) and
    Upcoming Week (real schedule + injury designations; win probability
    shows once odds exist, else an honest placeholder) both use real data.
@@ -110,7 +110,7 @@ players and teams. Free data sources only; automated weekly updates.
    step 2 — the plumbing is ready, supply the key whenever you sign up at
    the-odds-api.com and it'll just start working).
 
-   Found a real scope bug while building this: Hub Grade computation
+   Found a real scope bug while building this: Focus Grade computation
    originally filtered to regular-season games only, which meant the
    "last week" of a finished season — usually a playoff week, in this
    case the Super Bowl — had no grades at all. Fixed by including
@@ -182,7 +182,7 @@ players and teams. Free data sources only; automated weekly updates.
 8. **[done]** Tuesday cron (GitHub Actions) + lighter frequent stat-refresh
    job. Three workflows in `.github/workflows/`:
    - `weekly-refresh.yml` — Tuesdays, full ingestion (including the heavy
-     play-by-play pull) plus Hub Grade/Power Rankings/Super Bowl odds
+     play-by-play pull) plus Focus Grade/Power Rankings/Super Bowl odds
      recomputation, for whatever season the current date resolves to.
    - `frequent-refresh.yml` — every 6 hours, injuries + live odds only
      (the two things that actually change between games), gated to

@@ -60,7 +60,7 @@ export default async function UsageTrendsPage({
         </section>
       </div>
 
-      <p className="mt-6 text-[11px] text-[var(--muted)]">
+      <p className="mt-6 text-xs text-[var(--muted)]">
         Route participation isn&apos;t included — it needs charting data (routes run per pass
         play) that isn&apos;t available from free sources; nflverse&apos;s free FTN charting data
         covers play-level context (motion, play action, blitzers) but not per-player routes.

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getTeam } from "@/lib/teams";
+import Image from "next/image";
+import { getTeam, getTeamLogoUrl } from "@/lib/teams";
 import { getTeamRoster, getTeamSchedule, getOffensiveTendencies } from "@/lib/data/team";
 import { getTeamPowerRankingHistory } from "@/lib/data/powerRankings";
 import { getLatestStatsSeason } from "@/lib/data/season";
@@ -37,22 +38,26 @@ export default async function TeamPage({
 
   return (
     <div>
-      <div className="mb-8 border-b border-[var(--border)] pb-4">
-        <div className="flex items-center gap-3">
-          <span
-            className="glow-static flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] text-xs font-bold"
-            style={{ color: team.color, ...glowVars }}
-          >
-            {team.abbr}
+      <div className="mb-8 border-b border-[var(--border)] pb-6">
+        <div className="flex items-center gap-4">
+          <span className="glow-static flex h-16 w-16 items-center justify-center rounded-2xl" style={glowVars}>
+            <Image
+              src={getTeamLogoUrl(team.id)}
+              alt={`${team.city} ${team.name} logo`}
+              width={56}
+              height={56}
+              className="object-contain"
+              priority
+            />
           </span>
           <div>
             <h1
-              className="glow-static-text text-lg font-bold tracking-tight"
+              className="glow-static-text text-2xl font-bold tracking-tight"
               style={{ color: team.color, ...glowVars }}
             >
               {team.city} {team.name}
             </h1>
-            <p className="text-xs text-[var(--muted)]">
+            <p className="text-sm text-[var(--muted)]">
               {team.conference} {team.division}
             </p>
           </div>

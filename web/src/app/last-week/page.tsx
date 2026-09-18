@@ -4,7 +4,7 @@ import { TeamBadge } from "@/components/TeamBadge";
 import { getLatestStatsSeason } from "@/lib/data/season";
 import {
   getLastWeek,
-  getTopHubGrades,
+  getTopFocusGrades,
   getWeeklyStatLeaders,
   getTopFantasyPerformances,
   getWeekResults,
@@ -27,8 +27,8 @@ export default async function LastWeekPage() {
     );
   }
 
-  const [hubGrades, statLeaders, fantasy, results, injuries] = await Promise.all([
-    getTopHubGrades(season, week),
+  const [focusGrades, statLeaders, fantasy, results, injuries] = await Promise.all([
+    getTopFocusGrades(season, week),
     getWeeklyStatLeaders(season, week),
     getTopFantasyPerformances(season, week),
     getWeekResults(season, week),
@@ -42,9 +42,9 @@ export default async function LastWeekPage() {
         subtitle={`${season} · Week ${week}`}
       />
       <div className="grid gap-8 sm:grid-cols-2">
-        <Section title="Top Hub Grades">
+        <Section title="Top Focus Grades">
           <ol className="space-y-1.5 text-sm">
-            {hubGrades.map((g, i) => (
+            {focusGrades.map((g, i) => (
               <li key={g.playerId} className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <span className="w-4 text-[var(--muted)]">{i + 1}</span>
@@ -56,7 +56,7 @@ export default async function LastWeekPage() {
               </li>
             ))}
           </ol>
-          <p className="mt-2 text-[11px] text-[var(--muted)]">
+          <p className="mt-2 text-xs text-[var(--muted)]">
             Our own 0-100 efficiency grade, not PFF&apos;s — rewards per-play efficiency, so a
             low-volume big-play game can outscore a compiler day.
           </p>
@@ -69,15 +69,15 @@ export default async function LastWeekPage() {
         <Section title="Top Stat Leaders">
           <div className="space-y-4">
             <div>
-              <h3 className="mb-1 text-[11px] text-[var(--muted)]">Passing Yards</h3>
+              <h3 className="mb-1 text-xs text-[var(--muted)]">Passing Yards</h3>
               <StatList rows={statLeaders.passYards} compact />
             </div>
             <div>
-              <h3 className="mb-1 text-[11px] text-[var(--muted)]">Rushing Yards</h3>
+              <h3 className="mb-1 text-xs text-[var(--muted)]">Rushing Yards</h3>
               <StatList rows={statLeaders.rushYards} compact />
             </div>
             <div>
-              <h3 className="mb-1 text-[11px] text-[var(--muted)]">Receiving Yards</h3>
+              <h3 className="mb-1 text-xs text-[var(--muted)]">Receiving Yards</h3>
               <StatList rows={statLeaders.recYards} compact />
             </div>
           </div>

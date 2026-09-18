@@ -43,7 +43,7 @@ python -m pipeline.run_ingestion --seasons 2025
 # upcoming (not-yet-played) games — safe to skip if you don't have one yet.
 python -m pipeline.run_ingestion --seasons 2025 --skip players games team_stats weekly_stats snap_counts injuries pbp_metrics
 
-# Derived-metric computation (Hub Grade, Power Rankings, Super Bowl odds)
+# Derived-metric computation (Focus Grade, Power Rankings, Super Bowl odds)
 # is a separate CLI, run after ingestion for that season:
 python -m pipeline.run_compute --season 2024
 ```
@@ -76,9 +76,9 @@ table remains unused by design, not because it's still pending.
 | `player_weekly_stats`: `success_rate`, `redzone_targets/carries/tds` | ✅ step 5, `pbp_derived.py` (play-by-play — see below) |
 | `player_weekly_stats`: `route_participation` | ❌ not available from free sources — checked `import_ftn_data()` directly in step 7; it has play-level charting (motion, play action, blitzers) but no per-player route data. Column stays NULL indefinitely, not "pending" |
 | `games`, basic `team_weekly_stats` (points, W/L/T) | ✅ step 3, `games.py` / `team_stats.py` |
-| `team_weekly_stats`: EPA/play, yards/play, red zone, turnovers, pass/rush rate | ✅ step 5, `pbp_derived.py` (built for Hub Grade, but populated here since Power Rankings, step 6, needs the same pbp pull — no reason to fetch that ~50k-row/season dataset twice) |
+| `team_weekly_stats`: EPA/play, yards/play, red zone, turnovers, pass/rush rate | ✅ step 5, `pbp_derived.py` (built for Focus Grade, but populated here since Power Rankings, step 6, needs the same pbp pull — no reason to fetch that ~50k-row/season dataset twice) |
 | `injury_reports` | ✅ step 3, `injuries.py` |
-| `hub_grades` | ✅ step 5, `pipeline/compute/hub_grade.py` (run via `run_compute.py`, not `run_ingestion.py` — it's a derived model, not a raw pull) |
+| `focus_grades` | ✅ step 5, `pipeline/compute/focus_grade.py` (run via `run_compute.py`, not `run_ingestion.py` — it's a derived model, not a raw pull) |
 | `betting_odds` | ⏳ needs `ODDS_API_KEY` (`pipeline/ingest/odds.py`, ready to run — not yet exercised against the live API in this environment, only against a synthetic payload matching the documented response shape). Only ever returns *upcoming* odds — `import_schedules()` already carries real historical moneyline/spread/total for free, a bonus noted in `games.py`'s docstring |
 | `power_rankings` | ✅ step 6, `pipeline/compute/power_rankings.py` |
 | `super_bowl_odds` | ✅ step 6, `pipeline/compute/super_bowl_odds.py` (reads the latest `power_rankings` row — run after it) |
@@ -131,7 +131,7 @@ table remains unused by design, not because it's still pending.
   compute ourselves; red zone splits are attributed by role (passer,
   rusher, targeted receiver) so a single pass play can credit both the QB
   and the receiver with their own red zone involvement.
-- **Hub Grade** (`pipeline/compute/hub_grade.py`) z-scores each component
+- **Focus Grade** (`pipeline/compute/focus_grade.py`) z-scores each component
   against every other player at the *same position in the same week*
   before combining — see that file's docstring for the full methodology
   and the position-specific weights. Validated against real 2024 data:
@@ -140,7 +140,7 @@ table remains unused by design, not because it's still pending.
   Smith, Brown) plus Kareem Hunt, consistent with Philadelphia's 40-22 win.
   Note it's an *efficiency* grade, not a volume grade — a low-target,
   high-YPT WR game can outscore a high-volume compiler day; this is
-  intentional (see the README's positioning of Hub Grade as "not just
+  intentional (see the README's positioning of Focus Grade as "not just
   repackaged counting stats"), but worth explaining in the UI so it
   doesn't read as a bug.
 - **Odds** (`pipeline/ingest/odds.py`, `pipeline/odds_math.py`) matches

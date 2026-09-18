@@ -1,4 +1,4 @@
-"""Computes the Hub Grade: our own 0-100 offensive efficiency grade per
+"""Computes the Focus Grade: our own 0-100 offensive efficiency grade per
 player per game — explicitly not PFF's, and not just a repackaging of
 counting stats. A QB who throws for 180 efficient yards on a good team
 should out-grade one who padded garbage-time yardage in a blowout loss.
@@ -115,7 +115,7 @@ def _meets_volume(row) -> bool:
     return threshold is not None and row["touches"] >= threshold
 
 
-def compute_hub_grades(conn, season: int) -> pd.DataFrame:
+def compute_focus_grades(conn, season: int) -> pd.DataFrame:
     df = _fetch_raw(conn, season)
     df = _add_components(df)
     df = df[df.apply(_meets_volume, axis=1)].copy()
@@ -157,6 +157,6 @@ def compute_hub_grades(conn, season: int) -> pd.DataFrame:
     )
 
 
-def ingest_hub_grades(conn, season: int) -> int:
-    grades = compute_hub_grades(conn, season)
-    return upsert_dataframe(conn, "hub_grades", grades, conflict_cols=["player_id", "game_id"])
+def ingest_focus_grades(conn, season: int) -> int:
+    grades = compute_focus_grades(conn, season)
+    return upsert_dataframe(conn, "focus_grades", grades, conflict_cols=["player_id", "game_id"])

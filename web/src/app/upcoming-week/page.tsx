@@ -72,7 +72,7 @@ export default async function UpcomingWeekPage() {
             })}
           </ul>
           {odds.size === 0 && (
-            <p className="mt-2 text-[11px] text-[var(--muted)]">
+            <p className="mt-2 text-xs text-[var(--muted)]">
               Win probability needs an Odds API key (see pipeline/README.md) — not yet configured.
             </p>
           )}
@@ -119,7 +119,7 @@ export default async function UpcomingWeekPage() {
               })}
             </ul>
           )}
-          <p className="mt-2 text-[11px] text-[var(--muted)]">By overall Power Ranking (see Standings).</p>
+          <p className="mt-2 text-xs text-[var(--muted)]">By overall Power Ranking (see Standings).</p>
         </section>
 
         <section className="sm:col-span-2">
