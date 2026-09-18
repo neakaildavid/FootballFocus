@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
-import { getTeam, TEAMS } from "@/lib/teams";
-import { MOCK_PLAYERS } from "@/lib/mock/players";
+import { getTeam } from "@/lib/teams";
+import { getTeamRoster, getTeamSchedule } from "@/lib/data/team";
+import { getLatestStatsSeason } from "@/lib/data/season";
 import { PlayerLink } from "@/components/PlayerLink";
+import { TeamBadge } from "@/components/TeamBadge";
 import { ComingSoon } from "@/components/ComingSoon";
 
-export function generateStaticParams() {
-  return TEAMS.map((t) => ({ teamId: t.id }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function TeamPage({
   params,
@@ -17,7 +17,12 @@ export default async function TeamPage({
   const team = getTeam(teamId);
   if (!team) notFound();
 
-  const roster = MOCK_PLAYERS.filter((p) => p.teamId === team.id);
+  const season = await getLatestStatsSeason();
+  const [roster, schedule] = await Promise.all([
+    getTeamRoster(team.id, season),
+    getTeamSchedule(team.id, season),
+  ]);
+
   const glowVars = {
     "--glow-strong": `${team.color}90`,
     "--glow-soft": `${team.color}45`,
@@ -50,18 +55,16 @@ export default async function TeamPage({
       <div className="grid gap-8 sm:grid-cols-2">
         <section>
           <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
-            Offensive Roster (placeholder)
+            Offensive Roster
           </h2>
           <ul className="space-y-1.5 text-sm">
             {roster.length === 0 && (
-              <li className="text-[var(--muted)]">No placeholder players seeded for this team yet.</li>
+              <li className="text-[var(--muted)]">No offensive players on record for this team.</li>
             )}
             {roster.map((p) => (
               <li key={p.id} className="flex items-center justify-between">
-                <PlayerLink id={p.id} name={p.name} teamId={p.teamId} />
-                <span className="text-xs text-[var(--muted)]">
-                  {p.position} · #{p.jersey}
-                </span>
+                <PlayerLink id={p.id} name={p.fullName} teamId={team.id} />
+                <span className="text-xs text-[var(--muted)]">{p.position}</span>
               </li>
             ))}
           </ul>
@@ -71,14 +74,48 @@ export default async function TeamPage({
           <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
             Offensive Tendencies
           </h2>
-          <ComingSoon phase="build step 4" />
+          <ComingSoon phase="build step 6 (needs play-by-play aggregation)" />
         </section>
 
         <section>
           <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
-            Schedule & Results
+            {season} Schedule &amp; Results
           </h2>
-          <ComingSoon phase="build step 3" />
+          {schedule.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">No games on record for this team yet.</p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {schedule.map((g) => (
+                <li key={g.gameId} className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="w-10 text-[var(--muted)]">Wk {g.week}</span>
+                    <span className="text-[var(--muted)]">{g.isHome ? "vs" : "@"}</span>
+                    <TeamBadge teamId={g.opponentTeamId} />
+                  </span>
+                  <span className="tabular-nums text-[var(--muted)]">
+                    {g.pointsFor != null && g.pointsAgainst != null ? (
+                      <>
+                        <span
+                          className={
+                            g.result === "W"
+                              ? "text-[var(--accent-up)]"
+                              : g.result === "L"
+                                ? "text-[var(--accent-down)]"
+                                : ""
+                          }
+                        >
+                          {g.result}
+                        </span>{" "}
+                        {g.pointsFor}-{g.pointsAgainst}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section>

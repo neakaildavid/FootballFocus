@@ -1,50 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
-import Fuse from "fuse.js";
-import { TEAMS } from "@/lib/teams";
-import { MOCK_PLAYERS } from "@/lib/mock/players";
-
-interface SearchEntry {
-  id: string;
-  label: string;
-  sub: string;
-  href: string;
-}
-
-function buildIndex(): SearchEntry[] {
-  const teamEntries: SearchEntry[] = TEAMS.map((t) => ({
-    id: `team-${t.id}`,
-    label: `${t.city} ${t.name}`,
-    sub: `Team · ${t.abbr}`,
-    href: `/teams/${t.id}`,
-  }));
-  const playerEntries: SearchEntry[] = MOCK_PLAYERS.map((p) => ({
-    id: `player-${p.id}`,
-    label: p.name,
-    sub: `${p.position} · ${p.teamId.toUpperCase()}`,
-    href: `/players/${p.id}`,
-  }));
-  return [...playerEntries, ...teamEntries];
-}
+import type { SearchEntry } from "@/app/api/search/route";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchEntry[]>([]);
   const router = useRouter();
 
-  const index = useMemo(() => buildIndex(), []);
-  const fuse = useMemo(
-    () => new Fuse(index, { keys: ["label", "sub"], threshold: 0.35 }),
-    [index]
-  );
-
-  const results = useMemo(() => {
-    if (!query.trim()) return index.slice(0, 8);
-    return fuse.search(query).map((r) => r.item).slice(0, 8);
-  }, [query, fuse, index]);
+  useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    const handle = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+        .then((r) => r.json())
+        .then(setResults)
+        .catch(() => {});
+    }, 150);
+    return () => {
+      clearTimeout(handle);
+      controller.abort();
+    };
+  }, [query, open]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

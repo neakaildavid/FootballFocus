@@ -23,3 +23,36 @@ export function classifyTrend(zScore: number, threshold = TREND_Z_THRESHOLD): Tr
   if (zScore <= -threshold) return { direction: "down", zScore };
   return { direction: "none", zScore };
 }
+
+/**
+ * Computes a within-player trend from a single season's game-by-game
+ * values, in chronological order: recent-window mean vs. the mean of every
+ * game *before* that window, in units of the baseline's own standard
+ * deviation. The baseline deliberately excludes the recent window (rather
+ * than blending it in) so a hot streak doesn't drag its own comparison
+ * point toward itself. Used by Season Leaders (and, once built, Usage
+ * Trends / Breakout Tracker) so every trending-arrow surface shares one
+ * definition of "trending." Needs at least 2 baseline games with any
+ * variance to say anything meaningful — early season, this returns "none".
+ */
+export function computeTrendFromSeries(
+  values: number[],
+  recentWindow = 3,
+  threshold = TREND_Z_THRESHOLD
+): TrendResult {
+  if (values.length <= recentWindow) return { direction: "none", zScore: 0 };
+
+  const baseline = values.slice(0, values.length - recentWindow);
+  const recent = values.slice(values.length - recentWindow);
+  if (baseline.length < 2) return { direction: "none", zScore: 0 };
+
+  const baselineMean = baseline.reduce((a, b) => a + b, 0) / baseline.length;
+  const variance = baseline.reduce((a, b) => a + (b - baselineMean) ** 2, 0) / baseline.length;
+  const stddev = Math.sqrt(variance);
+  if (stddev === 0) return { direction: "none", zScore: 0 };
+
+  const recentMean = recent.reduce((a, b) => a + b, 0) / recent.length;
+
+  const zScore = (recentMean - baselineMean) / stddev;
+  return classifyTrend(zScore, threshold);
+}

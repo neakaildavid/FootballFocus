@@ -1,43 +1,58 @@
-"use client";
-
-import { useMemo, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { PlayerLink } from "@/components/PlayerLink";
 import { TeamBadge } from "@/components/TeamBadge";
 import { TrendArrow } from "@/components/TrendArrow";
-import { classifyTrend } from "@/lib/trend";
-import { MOCK_PLAYERS } from "@/lib/mock/players";
+import { getLatestStatsSeason } from "@/lib/data/season";
 import {
+  getLeaderboard,
   STAT_CATEGORIES,
   TIME_RANGES,
   StatCategory,
   TimeRange,
-  mockLeaderboard,
-} from "@/lib/mock/leaders";
+} from "@/lib/data/leaders";
 
-export default function LeadersPage() {
-  const [category, setCategory] = useState<StatCategory>("recYards");
-  const [range, setRange] = useState<TimeRange>("full");
+export const dynamic = "force-dynamic";
 
-  const rows = useMemo(() => mockLeaderboard(category, range), [category, range]);
-  const playersById = useMemo(
-    () => Object.fromEntries(MOCK_PLAYERS.map((p) => [p.id, p])),
-    []
-  );
+function isStatCategory(value: string | undefined): value is StatCategory {
+  return STAT_CATEGORIES.some((c) => c.key === value);
+}
+function isTimeRange(value: string | undefined): value is TimeRange {
+  return TIME_RANGES.some((r) => r.key === value);
+}
+
+export default async function LeadersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; range?: string; season?: string }>;
+}) {
+  const params = await searchParams;
+  const category: StatCategory = isStatCategory(params.category) ? params.category : "recYards";
+  const range: TimeRange = isTimeRange(params.range) ? params.range : "full";
+  const latestSeason = await getLatestStatsSeason();
+  const season = params.season ? Number(params.season) : latestSeason;
+
+  const rows = await getLeaderboard(season, category, range);
+  const categoryLabel = STAT_CATEGORIES.find((c) => c.key === category)?.label;
+
+  const linkFor = (overrides: Partial<{ category: string; range: string; season: string }>) => {
+    const next = new URLSearchParams({ category, range, season: String(season), ...overrides });
+    return `/leaders?${next.toString()}`;
+  };
 
   return (
     <div>
       <PageHeader
         title="Season Stats Leaders"
-        subtitle="Placeholder data — real leaderboards land once the ingestion pipeline is wired in (build step 3-4)."
+        subtitle={`${season} regular season${season !== latestSeason ? "" : " (current)"}`}
       />
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-1">
           {STAT_CATEGORIES.map((c) => (
-            <button
+            <Link
               key={c.key}
-              onClick={() => setCategory(c.key)}
+              href={linkFor({ category: c.key })}
               className={`rounded px-2.5 py-1 text-xs ${
                 category === c.key
                   ? "bg-white/10 text-[var(--foreground)]"
@@ -45,14 +60,14 @@ export default function LeadersPage() {
               }`}
             >
               {c.label}
-            </button>
+            </Link>
           ))}
         </div>
         <div className="flex gap-1 self-start rounded border border-[var(--border)] p-0.5">
           {TIME_RANGES.map((r) => (
-            <button
+            <Link
               key={r.key}
-              onClick={() => setRange(r.key)}
+              href={linkFor({ range: r.key })}
               className={`rounded px-2.5 py-1 text-xs ${
                 range === r.key
                   ? "bg-white/10 text-[var(--foreground)]"
@@ -60,51 +75,48 @@ export default function LeadersPage() {
               }`}
             >
               {r.label}
-            </button>
+            </Link>
           ))}
         </div>
       </div>
 
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--muted)]">
-            <th className="py-2 pr-3 font-normal">#</th>
-            <th className="py-2 pr-3 font-normal">Player</th>
-            <th className="py-2 pr-3 font-normal">Team</th>
-            <th className="py-2 pr-3 text-right font-normal">
-              {STAT_CATEGORIES.find((c) => c.key === category)?.label}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => {
-            const player = playersById[row.playerId];
-            if (!player) return null;
-            const trend = classifyTrend(row.zScore);
-            return (
+      {rows.length === 0 ? (
+        <p className="text-sm text-[var(--muted)]">No data for {season} yet.</p>
+      ) : (
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--muted)]">
+              <th className="py-2 pr-3 font-normal">#</th>
+              <th className="py-2 pr-3 font-normal">Player</th>
+              <th className="py-2 pr-3 font-normal">Team</th>
+              <th className="py-2 pr-3 text-right font-normal">{categoryLabel}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
               <tr key={row.playerId} className="border-b border-[var(--border)]/60">
                 <td className="py-2.5 pr-3 text-[var(--muted)]">{i + 1}</td>
                 <td className="py-2.5 pr-3">
-                  <PlayerLink id={player.id} name={player.name} teamId={player.teamId} />
-                  <span className="ml-2 text-xs text-[var(--muted)]">{player.position}</span>
+                  <PlayerLink id={row.playerId} name={row.playerName} teamId={row.teamId} />
+                  <span className="ml-2 text-xs text-[var(--muted)]">{row.position}</span>
                 </td>
                 <td className="py-2.5 pr-3">
-                  <TeamBadge teamId={player.teamId} />
+                  <TeamBadge teamId={row.teamId} />
                 </td>
                 <td className="py-2.5 pr-3 text-right tabular-nums">
-                  {row.value.toLocaleString()}
-                  <TrendArrow direction={trend.direction} />
+                  {row.value.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                  <TrendArrow direction={row.trend.direction} />
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <p className="mt-4 text-xs text-[var(--muted)]">
-        Arrows appear only when a player&apos;s recent-window rate crosses the configured
-        z-score threshold vs. their baseline (see <code>lib/trend.ts</code>) — not every
-        row gets one.
+        Arrows appear only when a player&apos;s last 3 games differ significantly from their
+        season baseline (z-score threshold, see <code>lib/trend.ts</code>) — not every row gets
+        one.
       </p>
     </div>
   );

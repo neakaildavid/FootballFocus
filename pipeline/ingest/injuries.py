@@ -27,7 +27,9 @@ def ingest_injuries(conn, resolve_team: TeamResolver, injuries_df: pd.DataFrame)
             "status": inj["report_status"],
             "practice_status": inj["practice_status"],
             "description": inj["report_primary_injury"],
-            "report_date": inj["date_modified"],
+            # Not present in every nflverse release (seen missing starting
+            # with the 2025 data) — fall back to NULL rather than failing.
+            "report_date": inj["date_modified"] if "date_modified" in inj.columns else None,
         }
     )
     before = len(out)

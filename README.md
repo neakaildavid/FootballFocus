@@ -63,8 +63,31 @@ players and teams. Free data sources only; automated weekly updates.
    (need play-by-play/charting data this step doesn't touch). Full
    1999-present historical backfill and the live odds API are not yet run
    — see `pipeline/README.md`'s scope table.
-4. Season Stats Leaders page (filters + trending arrows), Player Pages, Team
-   Pages.
+4. **[done]** Season Stats Leaders page (filters + trending arrows), Player
+   Pages, Team Pages — wired to real Postgres data via `web/src/lib/db.ts`
+   (`pg`) and `web/src/lib/data/*`. Season/category/time-range filters are
+   plain URL search params (server-rendered, no client JS needed); the
+   "current season" is derived from `max(season)` in `player_weekly_stats`
+   rather than hardcoded, so it advances on its own once a fresh season's
+   stats are ingested (nflverse currently lags — as of this build, 2025/2026
+   have schedules but no player box scores yet, so the site's current
+   season is 2024). The Cmd+K command palette now searches real players via
+   a `/api/search` route instead of a client-side mock index. Verified
+   against real data in a live dev server, not just type-checked: real 2024
+   leaderboards (Burrow/Goff/Mayfield atop passing yards), a real Chiefs
+   roster and schedule, real Mahomes/McCaffrey season lines, and confirmed
+   trend arrows appear for both up (36) and down (6) cases across the full
+   player population, not just the leaderboard's top rows (which skew "up"
+   by nature — a hot recent stretch is often *why* a player is near the top
+   of a cumulative season leaderboard). Two real bugs found and fixed along
+   the way: team rosters/search were including decades-retired players
+   because `players.current_team_id` is each player's all-time *last* team,
+   not their current one — fixed by deriving "roster" from actual
+   `player_weekly_stats` rows in the latest season instead; and a
+   `SELECT DISTINCT ... ORDER BY <expression not in select list>` Postgres
+   error in the roster query, fixed with a subquery. Offensive
+   tendencies, Hub Grade, and power ranking sections remain placeholders
+   pending steps 5-6.
 5. Hub Grade model, Last Week page, Upcoming Week page (wire in odds).
 6. Standings + Power Rankings, Future/Super Bowl page.
 7. Snap Count/Usage Trends, Rookie/Breakout Tracker, Historical Comparison.

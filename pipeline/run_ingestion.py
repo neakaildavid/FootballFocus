@@ -36,6 +36,63 @@ def _timed(label, fn):
     print(f"  {label}: {n} rows written ({time.time() - t0:.1f}s)")
 
 
+def _run_weekly_stats(conn, resolve_team, seasons):
+    """nflverse publishes player_stats/NGS releases with a lag after
+    schedules — a brand-new or just-started season can have full schedule
+    data but no weekly box scores yet. Each fetch below is independently
+    optional so a missing one degrades gracefully instead of aborting the
+    whole run (and any already-committed steps stay committed)."""
+    print("Fetching import_weekly_data()...")
+    try:
+        weekly_df = nfl.import_weekly_data(seasons)
+    except Exception as e:
+        print(f"  [weekly_stats] player_stats unavailable for {seasons}: {e}")
+        return
+
+    print("Fetching NGS passing/rushing...")
+    try:
+        ngs_passing_df = nfl.import_ngs_data(stat_type="passing", years=seasons)
+    except Exception as e:
+        print(f"  [weekly_stats] NGS passing unavailable for {seasons}: {e}")
+        ngs_passing_df = weekly_df.iloc[0:0]
+    try:
+        ngs_rushing_df = nfl.import_ngs_data(stat_type="rushing", years=seasons)
+    except Exception as e:
+        print(f"  [weekly_stats] NGS rushing unavailable for {seasons}: {e}")
+        ngs_rushing_df = weekly_df.iloc[0:0]
+
+    _timed(
+        "player_weekly_stats",
+        lambda: ingest_player_weekly_stats(conn, resolve_team, weekly_df, ngs_passing_df, ngs_rushing_df),
+    )
+    conn.commit()
+
+
+def _run_snap_counts(conn, resolve_team, players_df, seasons):
+    print("Fetching import_snap_counts()...")
+    try:
+        snap_counts_df = nfl.import_snap_counts(seasons)
+    except Exception as e:
+        print(f"  [snap_counts] unavailable for {seasons}: {e}")
+        return
+    _timed(
+        "snap_counts merged",
+        lambda: ingest_snap_counts(conn, resolve_team, players_df, snap_counts_df),
+    )
+    conn.commit()
+
+
+def _run_injuries(conn, resolve_team, seasons):
+    print("Fetching import_injuries()...")
+    try:
+        injuries_df = nfl.import_injuries(seasons)
+    except Exception as e:
+        print(f"  [injuries] unavailable for {seasons}: {e}")
+        return
+    _timed("injury_reports", lambda: ingest_injuries(conn, resolve_team, injuries_df))
+    conn.commit()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--seasons", type=int, nargs="+", required=True, help="e.g. --seasons 2023 2024")
@@ -64,46 +121,13 @@ def main() -> None:
             conn.commit()
 
         if "weekly_stats" not in skip:
-            print("Fetching import_weekly_data() + NGS passing/rushing...")
-            weekly_df = nfl.import_weekly_data(seasons)
-            try:
-                ngs_passing_df = nfl.import_ngs_data(stat_type="passing", years=seasons)
-            except Exception as e:  # NGS coverage doesn't extend as far back as box scores
-                print(f"  [weekly_stats] NGS passing unavailable for {seasons}: {e}")
-                ngs_passing_df = weekly_df.iloc[0:0]
-            try:
-                ngs_rushing_df = nfl.import_ngs_data(stat_type="rushing", years=seasons)
-            except Exception as e:
-                print(f"  [weekly_stats] NGS rushing unavailable for {seasons}: {e}")
-                ngs_rushing_df = weekly_df.iloc[0:0]
-            _timed(
-                "player_weekly_stats",
-                lambda: ingest_player_weekly_stats(
-                    conn, resolve_team, weekly_df, ngs_passing_df, ngs_rushing_df
-                ),
-            )
-            conn.commit()
+            _run_weekly_stats(conn, resolve_team, seasons)
 
         if "snap_counts" not in skip:
-            print("Fetching import_snap_counts()...")
-            try:
-                snap_counts_df = nfl.import_snap_counts(seasons)
-                _timed(
-                    "snap_counts merged",
-                    lambda: ingest_snap_counts(conn, resolve_team, players_df, snap_counts_df),
-                )
-                conn.commit()
-            except Exception as e:  # PFR snap-count scraping doesn't cover every season
-                print(f"  [snap_counts] unavailable for {seasons}: {e}")
+            _run_snap_counts(conn, resolve_team, players_df, seasons)
 
         if "injuries" not in skip:
-            print("Fetching import_injuries()...")
-            try:
-                injuries_df = nfl.import_injuries(seasons)
-                _timed("injury_reports", lambda: ingest_injuries(conn, resolve_team, injuries_df))
-                conn.commit()
-            except Exception as e:  # injury reports aren't available for older seasons
-                print(f"  [injuries] unavailable for {seasons}: {e}")
+            _run_injuries(conn, resolve_team, seasons)
 
     print("done.")
 
