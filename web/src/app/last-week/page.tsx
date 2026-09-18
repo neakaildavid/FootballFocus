@@ -3,7 +3,7 @@ import { PlayerLink } from "@/components/PlayerLink";
 import { TeamBadge } from "@/components/TeamBadge";
 import { getLatestStatsSeason } from "@/lib/data/season";
 import {
-  getLastWeek,
+  getLastCompletedWeek,
   getTopFocusGrades,
   getWeeklyStatLeaders,
   getTopFantasyPerformances,
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LastWeekPage() {
   const season = await getLatestStatsSeason();
-  const week = await getLastWeek(season);
+  const week = await getLastCompletedWeek(season);
 
   if (!week) {
     return (

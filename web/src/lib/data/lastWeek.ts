@@ -1,18 +1,37 @@
 import { query, queryOne } from "@/lib/db";
 
 /**
- * The final week of the site's "current" (latest-with-stats) season —
- * REG and POST share one week-number sequence in nflverse (19-22 are
- * Wild Card/Divisional/Conference/Super Bowl), so a plain max(week)
- * across both correctly lands on the season's actual last game, whether
- * that's a Week 18 finale or the Super Bowl.
+ * The most recent week that's actually FINISHED — every game in it has
+ * status = 'final' — not just the highest week with any stats at all.
+ * Without this distinction, mid-week (e.g. after Thursday Night Football
+ * but before Sunday's games) this would show a "Last Week" that's really
+ * the *current*, still-in-progress week, mixing finished and not-yet-played
+ * games under a "final results" page. Once the current week's last game
+ * finishes, this naturally advances to it — see getCurrentWeek() in
+ * thisWeek.ts for the complementary "week in progress" concept.
+ *
+ * Also requires player_weekly_stats to exist for that week, guarding
+ * against the gap between games finishing and nflverse publishing box
+ * scores (typically same-day, but not instant).
  */
-export async function getLastWeek(season: number): Promise<number | null> {
-  const row = await queryOne<{ max: number | null }>(
-    "SELECT max(week) AS max FROM player_weekly_stats WHERE season = $1",
+export async function getLastCompletedWeek(season: number): Promise<number | null> {
+  const row = await queryOne<{ week: number | null }>(
+    `
+    SELECT g.week
+    FROM games g
+    WHERE g.season = $1
+    GROUP BY g.week
+    HAVING bool_and(g.status = 'final')
+       AND EXISTS (
+         SELECT 1 FROM player_weekly_stats pws
+         WHERE pws.season = $1 AND pws.week = g.week
+       )
+    ORDER BY g.week DESC
+    LIMIT 1
+    `,
     [season]
   );
-  return row?.max ?? null;
+  return row?.week ?? null;
 }
 
 export interface FocusGradeRow {

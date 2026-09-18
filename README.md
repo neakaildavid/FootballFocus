@@ -42,7 +42,7 @@ players and teams. Free data sources only; automated weekly updates.
   computation modules, if a synchronous endpoint is ever needed.
 - **Odds:** The Odds API free tier, via `ODDS_API_KEY` env var. Not yet
   configured — the owner will supply their own key. Until then, the
-  Upcoming Week page's odds section is a clearly labeled placeholder rather
+  This Week page's odds section is a clearly labeled placeholder rather
   than blocking on it.
 
 ## Build order (tracking `PROJECT_SPEC`)
@@ -204,6 +204,32 @@ players and teams. Free data sources only; automated weekly updates.
    turn these on.
 9. Polish: glow effects, hover states, mobile responsiveness, loading
    states, command palette shortcuts.
+
+## Post-launch changes
+
+The site went live on Vercel after step 8. Notable changes made against the
+live site since then, beyond the numbered build order above:
+
+- **Modern redesign**: Geist Sans replacing the original monospace theme,
+  real ESPN-hosted team logos replacing initials-in-a-circle, a larger base
+  font size, retitled "Football Focus," and "Hub Grade" renamed to "Focus
+  Grade" as a full rename (database table included, not just UI text —
+  see `db/migrations/0002_rename_hub_grades.sql`).
+- **Last Week / This Week split**: "Last Week" now requires every game in a
+  week to have `status = 'final'` before showing it (`getLastCompletedWeek()`
+  in `web/src/lib/data/lastWeek.ts`) — previously it showed the highest week
+  with *any* stats, which mid-week showed a partially-played week as if it
+  were "final results." The old "Upcoming Week" page is now "This Week"
+  (`web/src/app/this-week/`, `web/src/lib/data/thisWeek.ts`): one unified
+  Matchups list for the week currently being played, showing a score for
+  games already final and date/matchup info for games not yet played,
+  rather than a separate page that only ever showed not-yet-played games.
+  The two pages' underlying week-selection queries are complementary by
+  construction: `getCurrentWeek()` finds the earliest week with a
+  not-yet-final game, `getLastCompletedWeek()` finds the latest week where
+  every game *is* final — so the moment a week's last game ends, it moves
+  from one page to the other automatically, with no date arithmetic or
+  hardcoded season/week logic anywhere.
 
 ## Scheduled jobs
 

@@ -2,28 +2,28 @@ import { PageHeader } from "@/components/PageHeader";
 import { PlayerLink } from "@/components/PlayerLink";
 import { TeamBadge } from "@/components/TeamBadge";
 import { ComingSoon } from "@/components/ComingSoon";
-import { getUpcomingWeek, getUpcomingGames, getUpcomingInjuries, getUpcomingOdds } from "@/lib/data/upcomingWeek";
+import { getCurrentWeek, getWeekGames, getWeekInjuries, getWeekOdds } from "@/lib/data/thisWeek";
 import { getLatestPowerRankings } from "@/lib/data/powerRankings";
 
 export const dynamic = "force-dynamic";
 
-export default async function UpcomingWeekPage() {
-  const upcoming = await getUpcomingWeek();
+export default async function ThisWeekPage() {
+  const current = await getCurrentWeek();
 
-  if (!upcoming) {
+  if (!current) {
     return (
       <div>
-        <PageHeader title="Upcoming Week" />
-        <p className="text-sm text-[var(--muted)]">No upcoming games on the schedule yet.</p>
+        <PageHeader title="This Week" />
+        <p className="text-sm text-[var(--muted)]">No games on the schedule right now.</p>
       </div>
     );
   }
 
-  const { season, week } = upcoming;
+  const { season, week } = current;
   const [games, injuries, odds, powerRankings] = await Promise.all([
-    getUpcomingGames(season, week),
-    getUpcomingInjuries(season, week),
-    getUpcomingOdds(season, week),
+    getWeekGames(season, week),
+    getWeekInjuries(season, week),
+    getWeekOdds(season, week),
     getLatestPowerRankings(season),
   ]);
   const rankByTeam = new Map(powerRankings.map((r) => [r.teamId, r.rank]));
@@ -37,25 +37,21 @@ export default async function UpcomingWeekPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Upcoming Week"
-        subtitle={`${season} · Week ${week}`}
-      />
+      <PageHeader title="This Week" subtitle={`${season} · Week ${week}`} />
       <div className="grid gap-8 sm:grid-cols-2">
         <section className="sm:col-span-2">
-          <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">
-            Schedule{odds.size > 0 ? " & Win Probability" : ""}
-          </h2>
+          <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">Matchups</h2>
           <ul className="divide-y divide-[var(--border)]">
             {games.map((g) => {
               const gameOdds = odds.get(g.gameId);
+              const isFinal = g.status === "final";
               return (
                 <li key={g.gameId} className="flex items-center justify-between py-2.5 text-sm">
                   <span className="flex items-center gap-2">
                     <TeamBadge teamId={g.awayTeamId} />
                     <span className="text-[var(--muted)]">@</span>
                     <TeamBadge teamId={g.homeTeamId} />
-                    {gameOdds?.impliedProbHome != null && gameOdds.impliedProbAway != null && (
+                    {!isFinal && gameOdds?.impliedProbHome != null && gameOdds.impliedProbAway != null && (
                       <span className="ml-2 text-xs text-[var(--muted)]">
                         {gameOdds.impliedProbHome >= gameOdds.impliedProbAway
                           ? `${g.homeTeamId.toUpperCase()} ${Math.round(gameOdds.impliedProbHome * 100)}%`
@@ -63,15 +59,27 @@ export default async function UpcomingWeekPage() {
                       </span>
                     )}
                   </span>
-                  <span className="text-xs text-[var(--muted)]">
-                    {g.gameDate ? new Date(g.gameDate).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : "TBD"}
-                    {g.stadium ? ` · ${g.stadium}` : ""}
-                  </span>
+                  {isFinal ? (
+                    <span className="tabular-nums font-medium">
+                      {g.awayScore}-{g.homeScore}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[var(--muted)]">
+                      {g.gameDate
+                        ? new Date(g.gameDate).toLocaleDateString(undefined, {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "TBD"}
+                      {g.stadium ? ` · ${g.stadium}` : ""}
+                    </span>
+                  )}
                 </li>
               );
             })}
           </ul>
-          {odds.size === 0 && (
+          {odds.size === 0 && games.some((g) => g.status !== "final") && (
             <p className="mt-2 text-xs text-[var(--muted)]">
               Win probability needs an Odds API key (see pipeline/README.md) — not yet configured.
             </p>
