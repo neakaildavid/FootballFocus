@@ -1,0 +1,28 @@
+name: Apply DB migrations & seed
+
+# Manual only, deliberately not on a schedule — migrations should run when
+# the schema actually changes (as part of reviewing/merging that change),
+# not on every data-refresh cron tick. Trigger from the Actions tab after
+# merging a new file into db/migrations/.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: ./db/migrate.sh
+
+      - name: Run seeds
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: ./db/seed.sh

@@ -1,0 +1,59 @@
+name: Frequent injury/odds refresh
+
+# The "lighter frequent stat-refresh job" — just injury reports (updated
+# daily through the week, especially Wed-Fri practice reports) and live
+# odds (lines move continuously). Deliberately skips the heavy steps
+# (weekly stats, snap counts, play-by-play) that weekly-refresh.yml
+# already covers and that don't change between games anyway.
+#
+# Gated to actual NFL season months (Aug-Feb) so this doesn't burn The
+# Odds API's free-tier monthly request quota running 4x/day through the
+# ~6 months of offseason when there's nothing to fetch.
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check if in NFL season (Aug-Feb)
+        id: season_check
+        run: |
+          MONTH=$(date -u +%-m)
+          if [ "$MONTH" -ge 8 ] || [ "$MONTH" -le 2 ]; then
+            echo "in_season=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "in_season=false" >> "$GITHUB_OUTPUT"
+            echo "Off-season (month=$MONTH) — skipping to save Odds API quota."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.season_check.outputs.in_season == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.season_check.outputs.in_season == 'true'
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r pipeline/requirements.txt
+        if: steps.season_check.outputs.in_season == 'true'
+
+      - name: Determine current NFL season
+        if: steps.season_check.outputs.in_season == 'true'
+        run: |
+          MONTH=$(date -u +%-m)
+          YEAR=$(date -u +%Y)
+          if [ "$MONTH" -ge 8 ]; then SEASON=$YEAR; else SEASON=$((YEAR - 1)); fi
+          echo "SEASON=$SEASON" >> "$GITHUB_ENV"
+
+      - name: Refresh injuries and odds
+        if: steps.season_check.outputs.in_season == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python -m pipeline.run_ingestion --seasons "$SEASON" \
+            --skip players games team_stats weekly_stats snap_counts pbp_metrics

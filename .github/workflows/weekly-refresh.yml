@@ -1,0 +1,43 @@
+name: Weekly stat refresh
+
+# Tuesday, after Monday Night Football and the new week's injury report
+# cycle both begin. Full ingestion (including the heavy play-by-play pull)
+# for the current NFL season, then recomputes Hub Grade / Power Rankings /
+# Super Bowl odds on top of it. See pipeline/README.md for what each step
+# does and how to run this by hand.
+on:
+  schedule:
+    - cron: "0 12 * * 2" # Tuesday 12:00 UTC (~7-8am ET)
+  workflow_dispatch: {} # lets you trigger a run manually from the Actions tab
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11" # pipeline/requirements.txt pins pandas==1.5.3, no 3.13+ wheel
+
+      - run: pip install -r pipeline/requirements.txt
+
+      - name: Determine current NFL season
+        run: |
+          MONTH=$(date -u +%-m)
+          YEAR=$(date -u +%Y)
+          if [ "$MONTH" -ge 8 ]; then SEASON=$YEAR; else SEASON=$((YEAR - 1)); fi
+          echo "SEASON=$SEASON" >> "$GITHUB_ENV"
+          echo "Refreshing season $SEASON"
+
+      - name: Ingest current season (stats, rosters, snap counts, schedules, play-by-play, odds)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python -m pipeline.run_ingestion --seasons "$SEASON"
+
+      - name: Recompute Hub Grade / Power Rankings / Super Bowl odds
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m pipeline.run_compute --season "$SEASON"

@@ -7,16 +7,18 @@ players and teams. Free data sources only; automated weekly updates.
 
 - **`web/`** — Next.js (App Router) + TypeScript + Tailwind CSS frontend.
   Serves pages and read-only API routes, querying Postgres directly.
-- **`pipeline/`** — Python data ingestion + stat computation (not yet built).
-  Pulls from `nfl_data_py`/nflverse, computes leaders/trends/power
-  rankings/Hub Grades, and writes results into Postgres. Runs as a scheduled
-  GitHub Actions job, not a persistent server (see architecture note below).
+- **`pipeline/`** — Python ingestion + stat-computation CLI
+  (`nfl_data_py`/nflverse → Postgres): rosters, schedules, weekly stats,
+  snap counts, play-by-play-derived metrics, Hub Grade, Power Rankings,
+  Super Bowl odds, live odds. Runs as a scheduled GitHub Actions job, not a
+  persistent server (see architecture note below). See `pipeline/README.md`
+  for local setup (needs Python 3.11 specifically) and what's ingested vs.
+  permanently out of scope.
 - **`db/`** — SQL schema/migrations + static seed data, applied via plain
   `psql` (no ORM). See `db/README.md` for local setup and the full schema
   overview.
-- **`pipeline/`** — Python ingestion CLI (`nfl_data_py`/nflverse → Postgres).
-  See `pipeline/README.md` for setup (needs Python 3.11 specifically) and
-  what's ingested vs. deferred to later build steps.
+- **`.github/workflows/`** — scheduled jobs that run the pipeline in
+  production (build step 8). See "Scheduled jobs" below.
 
 ## Architecture decisions (locked in with the project owner)
 
@@ -177,9 +179,58 @@ players and teams. Free data sources only; automated weekly updates.
    player was Michael Penix Jr., the real Falcons rookie QB who actually
    took over the starting job late in the 2024 season — exactly the
    "breakout" story this feature is meant to surface.
-8. Tuesday cron (GitHub Actions) + lighter frequent stat-refresh job.
+8. **[done]** Tuesday cron (GitHub Actions) + lighter frequent stat-refresh
+   job. Three workflows in `.github/workflows/`:
+   - `weekly-refresh.yml` — Tuesdays, full ingestion (including the heavy
+     play-by-play pull) plus Hub Grade/Power Rankings/Super Bowl odds
+     recomputation, for whatever season the current date resolves to.
+   - `frequent-refresh.yml` — every 6 hours, injuries + live odds only
+     (the two things that actually change between games), gated to
+     Aug-Feb so it doesn't burn The Odds API's free-tier monthly quota
+     running through the ~6-month offseason for nothing.
+   - `db-migrate.yml` — manual only (`workflow_dispatch`), applies
+     `db/migrate.sh` + `db/seed.sh`. Deliberately not on the recurring
+     schedule — migrations should run when the schema changes, not on
+     every data-refresh tick.
+
+   Validated everything short of an actual GitHub Actions run, since this
+   repo isn't pushed to GitHub yet and has no repository secrets
+   configured: YAML syntax checked, the season-resolution bash logic
+   tested against the real current date (correctly resolves to 2026), and
+   every command each workflow calls has already been proven against real
+   data in steps 3-7 (this is the same `pipeline.run_ingestion` /
+   `pipeline.run_compute` CLI, just invoked on a schedule instead of by
+   hand). See "Scheduled jobs" below for what's still needed to actually
+   turn these on.
 9. Polish: glow effects, hover states, mobile responsiveness, loading
    states, command palette shortcuts.
+
+## Scheduled jobs
+
+The workflows in `.github/workflows/` need three things this environment
+can't provide, in order:
+
+1. **The repo pushed to GitHub.** Scheduled workflows only run once
+   committed to the default branch on GitHub itself — a local commit
+   isn't enough. This repo has a `origin` remote configured
+   (`neakaildavid/FootballFocus`) but hasn't been pushed yet.
+2. **A production database.** Neon hasn't been set up yet (see the
+   architecture decision above) — `db/README.md` has the exact steps.
+   Once you have a connection string, run `db/migrate.sh` + `db/seed.sh`
+   against it once (locally, or via the `db-migrate.yml` workflow after
+   step 3 below).
+3. **Repository secrets**, under Settings → Secrets and variables →
+   Actions:
+   - `DATABASE_URL` — the Neon connection string from step 2.
+   - `ODDS_API_KEY` — optional; from [the-odds-api.com](https://the-odds-api.com)'s
+     free tier. Every workflow degrades gracefully without it (odds
+     ingestion just logs a skip and writes 0 rows — see
+     `pipeline/ingest/odds.py`), so it's fine to turn these on before
+     you have a key and add it later.
+
+After that, `weekly-refresh.yml` and `frequent-refresh.yml` run on their
+own; trigger any workflow manually from the Actions tab
+(`workflow_dispatch`) to test it without waiting for the schedule.
 
 ## Development
 
