@@ -91,6 +91,29 @@ def upsert_dataframe(
     return len(records)
 
 
+def insert_dataframe(
+    conn: psycopg.Connection,
+    table: str,
+    df: pd.DataFrame,
+    batch_size: int = 500,
+) -> int:
+    """Plain append-only INSERT, no ON CONFLICT clause — for tables where
+    every fetch is deliberately a new row (e.g. betting_odds, which retains
+    a history of line movement rather than upserting to the latest line)."""
+    if df.empty:
+        return 0
+    cols = list(df.columns)
+    col_list = ", ".join(cols)
+    placeholders = ", ".join(f"%({c})s" for c in cols)
+    sql = f"INSERT INTO {table} ({col_list}) VALUES ({placeholders})"
+
+    records = _records(conn, table, df)
+    with conn.cursor() as cur:
+        for i in range(0, len(records), batch_size):
+            cur.executemany(sql, records[i : i + batch_size])
+    return len(records)
+
+
 def apply_updates(
     conn: psycopg.Connection,
     table: str,

@@ -21,13 +21,15 @@ import nfl_data_py as nfl
 from pipeline.db import get_conn
 from pipeline.ingest.games import ingest_games
 from pipeline.ingest.injuries import ingest_injuries
+from pipeline.ingest.odds import ingest_live_odds
+from pipeline.ingest.pbp_derived import ingest_player_pbp_metrics, ingest_team_pbp_metrics
 from pipeline.ingest.players import ingest_players
 from pipeline.ingest.snap_counts import ingest_snap_counts
 from pipeline.ingest.team_stats import ingest_team_weekly_stats_basic
 from pipeline.ingest.weekly_stats import ingest_player_weekly_stats
 from pipeline.teams import build_team_resolver
 
-STEPS = ["players", "games", "team_stats", "weekly_stats", "snap_counts", "injuries"]
+STEPS = ["players", "games", "team_stats", "weekly_stats", "snap_counts", "injuries", "pbp_metrics", "odds"]
 
 
 def _timed(label, fn):
@@ -93,6 +95,22 @@ def _run_injuries(conn, resolve_team, seasons):
     conn.commit()
 
 
+def _run_pbp_metrics(conn, resolve_team, seasons):
+    """Play-by-play is a much heavier pull than everything else here — one
+    season is ~50k rows of ~400 columns — so this stays a separate,
+    skippable step rather than folding into weekly_stats."""
+    print("Fetching import_pbp_data() (this is the heaviest pull — can take a while)...")
+    try:
+        pbp = nfl.import_pbp_data(seasons, downcast=True)
+    except Exception as e:
+        print(f"  [pbp_metrics] unavailable for {seasons}: {e}")
+        return
+    _timed("team_weekly_stats (pbp-derived)", lambda: ingest_team_pbp_metrics(conn, resolve_team, pbp))
+    conn.commit()
+    _timed("player_weekly_stats (pbp-derived)", lambda: ingest_player_pbp_metrics(conn, pbp))
+    conn.commit()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--seasons", type=int, nargs="+", required=True, help="e.g. --seasons 2023 2024")
@@ -128,6 +146,13 @@ def main() -> None:
 
         if "injuries" not in skip:
             _run_injuries(conn, resolve_team, seasons)
+
+        if "pbp_metrics" not in skip:
+            _run_pbp_metrics(conn, resolve_team, seasons)
+
+        if "odds" not in skip:
+            _timed("betting_odds (live)", lambda: ingest_live_odds(conn))
+            conn.commit()
 
     print("done.")
 

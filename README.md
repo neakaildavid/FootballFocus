@@ -88,7 +88,35 @@ players and teams. Free data sources only; automated weekly updates.
    error in the roster query, fixed with a subquery. Offensive
    tendencies, Hub Grade, and power ranking sections remain placeholders
    pending steps 5-6.
-5. Hub Grade model, Last Week page, Upcoming Week page (wire in odds).
+5. **[done]** Hub Grade model, Last Week page, Upcoming Week page (wire in
+   odds). Hub Grade (`pipeline/compute/hub_grade.py`) needed play-by-play
+   for success rate and red zone splits, which step 3 deliberately
+   deferred — that pbp pull (`pipeline/ingest/pbp_derived.py`) also
+   populates `team_weekly_stats`' EPA/red-zone/turnover columns while it's
+   at it, since step 6's Power Rankings needs the same ~50k-row/season
+   pull and there's no reason to fetch it twice. Last Week (Hub Grades,
+   stat leaders, fantasy performances, full scores, notable injuries) and
+   Upcoming Week (real schedule + injury designations; win probability
+   shows once odds exist, else an honest placeholder) both use real data.
+   Odds integration (`pipeline/ingest/odds.py`) is fully written —
+   matches The Odds API's team names against our `teams` table, locates
+   games by `(home_team_id, away_team_id, game_date)`, converts moneyline
+   to implied probability ourselves — and verified end-to-end against a
+   synthetic payload in the documented API shape through to a real DB
+   insert, but not yet run against the live API: that needs an
+   `ODDS_API_KEY` this environment doesn't have (same situation as Neon in
+   step 2 — the plumbing is ready, supply the key whenever you sign up at
+   the-odds-api.com and it'll just start working).
+
+   Found a real scope bug while building this: Hub Grade computation
+   originally filtered to regular-season games only, which meant the
+   "last week" of a finished season — usually a playoff week, in this
+   case the Super Bowl — had no grades at all. Fixed by including
+   postseason weeks (nflverse's week numbering doesn't overlap between
+   REG and POST, so this was safe) and re-verified: Super Bowl LIX's top
+   graded performers came back as Eagles skill players plus Kareem Hunt,
+   consistent with Philadelphia's real 40-22 win, and the site's real
+   scores/injuries for that game matched known results.
 6. Standings + Power Rankings, Future/Super Bowl page.
 7. Snap Count/Usage Trends, Rookie/Breakout Tracker, Historical Comparison.
 8. Tuesday cron (GitHub Actions) + lighter frequent stat-refresh job.

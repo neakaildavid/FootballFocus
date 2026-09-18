@@ -32,12 +32,20 @@ export DATABASE_URL="postgres://$(whoami)@localhost:5432/footballfocus_dev"
 python -m pipeline.run_ingestion --seasons 2023 2024
 
 # Full historical backfill (nflverse coverage starts 1999). This is a lot
-# of data across many seasons of weekly/NGS/snap-count pulls — expect it to
-# take a while; run it once, not on every cron tick.
+# of data across many seasons of weekly/NGS/snap-count/play-by-play pulls
+# — expect it to take a while; run it once, not on every cron tick.
 python -m pipeline.run_ingestion --seasons $(seq 1999 2025)
 
 # Weekly-refresh cadence during the season: just the current season.
 python -m pipeline.run_ingestion --seasons 2025
+
+# Odds needs its own key (ODDS_API_KEY in .env) and only ever returns
+# upcoming (not-yet-played) games — safe to skip if you don't have one yet.
+python -m pipeline.run_ingestion --seasons 2025 --skip players games team_stats weekly_stats snap_counts injuries pbp_metrics
+
+# Derived-metric computation (Hub Grade, and eventually trend snapshots /
+# power rankings) is a separate CLI, run after ingestion for that season:
+python -m pipeline.run_compute --season 2024
 ```
 
 Steps run in dependency order (`players` and `games` must land before
@@ -48,19 +56,18 @@ this session; it still fetches whatever those steps' data feeds downstream.
 
 ## What's in scope here vs. deferred
 
-Per the build order, this step covers **stats, rosters, snap counts, and
-schedules** — explicitly not odds (step 5) or the play-by-play-derived
-metrics that Hub Grade (step 5) and Power Rankings (step 6) need:
-
 | Column | Status |
 |---|---|
-| `player_weekly_stats`: passing/rushing/receiving box score, EPA, fantasy points, CPOE, rush yards over expected, target/carry share | ✅ ingested here |
-| `player_weekly_stats`: `offense_snaps`, `offense_snap_pct` | ✅ merged here from `import_snap_counts()` |
-| `player_weekly_stats`: `redzone_*`, `success_rate`, `route_participation` | ⏳ needs play-by-play (step 5) or FTN charting data (step 7) — left at their schema defaults/NULL |
-| `games`, basic `team_weekly_stats` (points, W/L/T) | ✅ ingested here |
-| `team_weekly_stats`: EPA/play, yards/play, red zone, turnovers | ⏳ needs play-by-play aggregation — added in step 6 (Power Rankings) via an UPDATE onto these same rows |
-| `injury_reports` | ✅ ingested here |
-| `betting_odds` | ⏳ step 5. Note: `import_schedules()` already carries historical moneyline/spread/total — a free bonus for backfilling *historical* odds once that step starts; only *upcoming*-week odds need The Odds API |
+| `player_weekly_stats`: passing/rushing/receiving box score, EPA, fantasy points, CPOE, rush yards over expected, target/carry share | ✅ step 3, `weekly_stats.py` |
+| `player_weekly_stats`: `offense_snaps`, `offense_snap_pct` | ✅ step 3, `snap_counts.py` |
+| `player_weekly_stats`: `success_rate`, `redzone_targets/carries/tds` | ✅ step 5, `pbp_derived.py` (play-by-play — see below) |
+| `player_weekly_stats`: `route_participation` | ⏳ needs FTN charting data — step 7 |
+| `games`, basic `team_weekly_stats` (points, W/L/T) | ✅ step 3, `games.py` / `team_stats.py` |
+| `team_weekly_stats`: EPA/play, yards/play, red zone, turnovers, pass/rush rate | ✅ step 5, `pbp_derived.py` (built for Hub Grade, but populated here since Power Rankings, step 6, needs the same pbp pull — no reason to fetch that ~50k-row/season dataset twice) |
+| `injury_reports` | ✅ step 3, `injuries.py` |
+| `hub_grades` | ✅ step 5, `pipeline/compute/hub_grade.py` (run via `run_compute.py`, not `run_ingestion.py` — it's a derived model, not a raw pull) |
+| `betting_odds` | ⏳ needs `ODDS_API_KEY` (`pipeline/ingest/odds.py`, ready to run — not yet exercised against the live API in this environment, only against a synthetic payload matching the documented response shape). Only ever returns *upcoming* odds — `import_schedules()` already carries real historical moneyline/spread/total for free, a bonus noted in `games.py`'s docstring |
+| `trend_snapshots`, `power_rankings`, `super_bowl_odds` | ⏳ steps 6-7 |
 
 ## Design notes worth knowing before extending this
 
@@ -100,3 +107,38 @@ metrics that Hub Grade (step 5) and Power Rankings (step 6) need:
   matched a player via the PFR crosswalk. 2024 passing-yards leaders came
   back correct (Burrow, Goff, Mayfield, Geno Smith, Darnold) as a sanity
   check against known real results.
+- **Play-by-play** (`pbp_derived.py`) is pulled transiently — never stored
+  raw, per the architecture note in the root README — and only *updates*
+  rows `games.py`/`weekly_stats.py` already created; it inserts nothing.
+  One season is ~50k rows × ~400 columns, by far the heaviest fetch here,
+  which is why it's its own skippable `pbp_metrics` step. `success_rate`
+  is nflverse's own EPA-based per-play success flag, not something we
+  compute ourselves; red zone splits are attributed by role (passer,
+  rusher, targeted receiver) so a single pass play can credit both the QB
+  and the receiver with their own red zone involvement.
+- **Hub Grade** (`pipeline/compute/hub_grade.py`) z-scores each component
+  against every other player at the *same position in the same week*
+  before combining — see that file's docstring for the full methodology
+  and the position-specific weights. Validated against real 2024 data:
+  grades landed with mean ≈50, stddev ≈13, range 0-100 as designed; the
+  Super Bowl LIX top grades were Eagles skill players (Hurts, Goedert,
+  Smith, Brown) plus Kareem Hunt, consistent with Philadelphia's 40-22 win.
+  Note it's an *efficiency* grade, not a volume grade — a low-target,
+  high-YPT WR game can outscore a high-volume compiler day; this is
+  intentional (see the README's positioning of Hub Grade as "not just
+  repackaged counting stats"), but worth explaining in the UI so it
+  doesn't read as a bug.
+- **Odds** (`pipeline/ingest/odds.py`, `pipeline/odds_math.py`) matches
+  The Odds API's full team names (`"Kansas City Chiefs"`) against our
+  `teams` table's `city || ' ' || name`, and locates the matching game by
+  `(home_team_id, away_team_id, game_date)` rather than any ID the two
+  systems share (there isn't one). Every fetch is a plain append-only
+  insert, not an upsert, so a week's line movement across multiple fetches
+  is retained — see `insert_dataframe()` in `pipeline/upsert.py`.
+  Implied probability is our own conversion from the raw moneyline
+  (vig included, deliberately — see `odds_math.py`'s docstring), not
+  anything the sportsbook itself reports. Verified end-to-end against a
+  synthetic payload built in the documented Odds API v4 shape, matched
+  against a real scheduled game in the dev DB, through to a real
+  `betting_odds` insert — but never against the live API, since that
+  needs a key this environment doesn't have.
