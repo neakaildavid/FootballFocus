@@ -117,7 +117,35 @@ players and teams. Free data sources only; automated weekly updates.
    graded performers came back as Eagles skill players plus Kareem Hunt,
    consistent with Philadelphia's real 40-22 win, and the site's real
    scores/injuries for that game matched known results.
-6. Standings + Power Rankings, Future/Super Bowl page.
+6. **[done]** Standings + Power Rankings, Super Bowl page. Standings are
+   computed live from real regular-season game results (no stored table
+   needed). Power Rankings (`pipeline/compute/power_rankings.py`) is a
+   weighted composite of 7 season-to-date z-scored metrics — point
+   differential, offensive/defensive EPA per play, net yards per play, red
+   zone efficiency, turnover margin, and a single-pass (non-recursive)
+   strength-of-schedule proxy — computed for every week played so far, not
+   just the latest, so a future rankings-over-time view has real history.
+   Super Bowl odds (`pipeline/compute/super_bowl_odds.py`) softmax the
+   latest composite scores over a projected 14-team field (top 7 per
+   conference by power ranking, a seeding proxy — not real tiebreaker
+   rules or bracket simulation).
+
+   Verified against real 2024 results: the model rated Baltimore (12-5)
+   as the best team by season's end even though Philadelphia won the
+   Super Bowl — which matches real advanced-stats consensus that season,
+   not a red flag — and rated Kansas City (their actual AFC finalist)
+   only 13th, consistent with the widely-discussed "record outperforming
+   underlying efficiency" narrative around that team in 2024. Bottom of
+   the rankings landed on Cleveland, Carolina, New England, and the
+   Giants — all real 2024 bottom-of-the-league teams.
+
+   One real bug found while building the Standings page: the first
+   version summed regular-season *and* playoff games into one win-loss
+   record, which put a playoff team's record past the 17-game regular
+   season (Buffalo showed 15-5 instead of their real 13-4). Fixed by
+   filtering standings to `season_type = 'REG'` — Power Rankings correctly
+   keeps including the postseason, since "how good is this team" and
+   "what's their seeding record" are different questions.
 7. Snap Count/Usage Trends, Rookie/Breakout Tracker, Historical Comparison.
 8. Tuesday cron (GitHub Actions) + lighter frequent stat-refresh job.
 9. Polish: glow effects, hover states, mobile responsiveness, loading

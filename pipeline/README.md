@@ -67,7 +67,9 @@ this session; it still fetches whatever those steps' data feeds downstream.
 | `injury_reports` | ✅ step 3, `injuries.py` |
 | `hub_grades` | ✅ step 5, `pipeline/compute/hub_grade.py` (run via `run_compute.py`, not `run_ingestion.py` — it's a derived model, not a raw pull) |
 | `betting_odds` | ⏳ needs `ODDS_API_KEY` (`pipeline/ingest/odds.py`, ready to run — not yet exercised against the live API in this environment, only against a synthetic payload matching the documented response shape). Only ever returns *upcoming* odds — `import_schedules()` already carries real historical moneyline/spread/total for free, a bonus noted in `games.py`'s docstring |
-| `trend_snapshots`, `power_rankings`, `super_bowl_odds` | ⏳ steps 6-7 |
+| `power_rankings` | ✅ step 6, `pipeline/compute/power_rankings.py` |
+| `super_bowl_odds` | ✅ step 6, `pipeline/compute/super_bowl_odds.py` (reads the latest `power_rankings` row — run after it) |
+| `trend_snapshots` | ⏳ step 7 |
 
 ## Design notes worth knowing before extending this
 
@@ -142,3 +144,19 @@ this session; it still fetches whatever those steps' data feeds downstream.
   against a real scheduled game in the dev DB, through to a real
   `betting_odds` insert — but never against the live API, since that
   needs a key this environment doesn't have.
+- **Power Rankings** (`pipeline/compute/power_rankings.py`) computes one
+  row per team per week *played so far*, not just the latest — each week's
+  z-scores are relative to that week's cohort, so week 3's ranking isn't
+  retroactively changed by week 10 data. EPA/play and yards/play are
+  play-weighted means (`sum(metric * plays) / sum(plays)`), not a naive
+  mean-of-games, so a 70-play game counts more than a 40-play one.
+  `epa_defense_z`'s sign is flipped before z-scoring (lower EPA allowed is
+  better defense) so every component in `WEIGHTS` shares the same "higher
+  z = better" direction — don't undo that if you touch the query. Strength
+  of schedule is a single non-recursive pass (opponents' own point-diff-
+  per-game so far), not an iterative SRS/Elo solve — a deliberate MVP
+  simplification, noted in the module docstring. `super_bowl_odds.py`
+  depends on `power_rankings` already being computed for that season (it
+  reads the latest week's rows) — `run_compute.py` runs them in that order
+  automatically, but a manual `--only super_bowl_odds` run needs
+  `power_rankings` to already exist.
