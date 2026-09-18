@@ -1,0 +1,49 @@
+name: Historical backfill
+
+# Manual only — for loading past seasons into a fresh database (e.g. a new
+# Neon project), which the recurring weekly-refresh.yml doesn't do since
+# it only ever targets the current season. Run this once per batch of
+# seasons you want to add; see the Actions tab's "Run workflow" form for
+# the inputs.
+on:
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: "Space-separated season years, e.g. '2015 2024'"
+        required: true
+        type: string
+      skip:
+        description: "Space-separated steps to skip (players games team_stats weekly_stats snap_counts injuries pbp_metrics odds), or leave blank"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r pipeline/requirements.txt
+
+      - name: Ingest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          SEASONS: ${{ inputs.seasons }}
+          SKIP: ${{ inputs.skip }}
+        # SEASONS/SKIP come from env, not interpolated directly into the
+        # script, so a value containing shell metacharacters can't inject
+        # commands (this is workflow_dispatch, triggered only by someone
+        # with write access, but there's no reason not to do this safely).
+        run: |
+          if [ -n "$SKIP" ]; then
+            python -m pipeline.run_ingestion --seasons $SEASONS --skip $SKIP
+          else
+            python -m pipeline.run_ingestion --seasons $SEASONS
+          fi

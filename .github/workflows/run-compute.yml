@@ -1,0 +1,34 @@
+name: Run compute for a season
+
+# Manual only — computes Hub Grade / Power Rankings / Super Bowl odds for
+# one season on demand. weekly-refresh.yml already does this for whatever
+# season the current date resolves to, but that's not useful right after
+# a historical backfill (e.g. loading 2024 today doesn't mean 2024 is
+# "the current season" by date) — use this instead for any season you
+# just backfilled with backfill.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Season year to compute, e.g. '2024'"
+        required: true
+        type: string
+
+jobs:
+  compute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r pipeline/requirements.txt
+
+      - name: Compute
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SEASON: ${{ inputs.season }}
+        run: python -m pipeline.run_compute --season "$SEASON"
