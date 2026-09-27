@@ -13,7 +13,10 @@ export function NavBar() {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-        <Link href="/" className="shrink-0 text-base font-bold tracking-tight">
+        <Link
+          href="/"
+          className="press-feedback shrink-0 text-base font-bold tracking-tight transition-opacity duration-200 hover:opacity-80"
+        >
           Football<span className="text-[var(--muted)]"> Focus</span>
         </Link>
 
@@ -24,10 +27,10 @@ export function NavBar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
+                className={`press-feedback whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors duration-200 ${
                   active
                     ? "text-[var(--foreground)] bg-white/[0.06]"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/[0.03]"
                 }`}
               >
                 {item.short}
@@ -41,7 +44,7 @@ export function NavBar() {
           <button
             aria-label="Toggle menu"
             onClick={() => setMobileOpen((v) => !v)}
-            className="rounded-lg border border-[var(--border)] px-2.5 py-2 text-sm lg:hidden"
+            className="press-feedback rounded-lg border border-[var(--border)] px-2.5 py-2 text-sm transition-colors duration-200 hover:bg-white/[0.06] lg:hidden"
           >
             {mobileOpen ? "✕" : "☰"}
           </button>
@@ -49,13 +52,13 @@ export function NavBar() {
       </div>
 
       {mobileOpen && (
-        <nav className="flex flex-col gap-0.5 border-t border-[var(--border)] px-4 py-2 lg:hidden">
+        <nav className="stagger-item flex flex-col gap-0.5 border-t border-[var(--border)] px-4 py-2 lg:hidden">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm text-[var(--muted)] hover:bg-white/[0.06] hover:text-[var(--foreground)]"
+              className="press-feedback rounded-lg px-3 py-2.5 text-sm text-[var(--muted)] transition-colors duration-200 hover:bg-white/[0.06] hover:text-[var(--foreground)]"
             >
               {item.label}
             </Link>

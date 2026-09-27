@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PlayerLink } from "@/components/PlayerLink";
 import { TeamBadge } from "@/components/TeamBadge";
 import { TrendArrow } from "@/components/TrendArrow";
+import { staggerDelay } from "@/lib/style";
 import { getLatestStatsSeason } from "@/lib/data/season";
 import {
   getLeaderboard,
@@ -53,10 +54,10 @@ export default async function LeadersPage({
             <Link
               key={c.key}
               href={linkFor({ category: c.key })}
-              className={`rounded px-2.5 py-1 text-xs ${
+              className={`press-feedback rounded px-2.5 py-1 text-xs transition-colors duration-200 ${
                 category === c.key
                   ? "bg-white/10 text-[var(--foreground)]"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/[0.04]"
               }`}
             >
               {c.label}
@@ -68,10 +69,10 @@ export default async function LeadersPage({
             <Link
               key={r.key}
               href={linkFor({ range: r.key })}
-              className={`rounded px-2.5 py-1 text-xs ${
+              className={`press-feedback rounded px-2.5 py-1 text-xs transition-colors duration-200 ${
                 range === r.key
                   ? "bg-white/10 text-[var(--foreground)]"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/[0.04]"
               }`}
             >
               {r.label}
@@ -94,7 +95,11 @@ export default async function LeadersPage({
           </thead>
           <tbody>
             {rows.map((row, i) => (
-              <tr key={row.playerId} className="border-b border-[var(--border)]/60">
+              <tr
+                key={row.playerId}
+                className="stagger-item border-b border-[var(--border)]/60 transition-colors duration-150 hover:bg-white/[0.025]"
+                style={staggerDelay(i)}
+              >
                 <td className="py-2.5 pr-3 text-[var(--muted)]">{i + 1}</td>
                 <td className="py-2.5 pr-3">
                   <PlayerLink id={row.playerId} name={row.playerName} teamId={row.teamId} />

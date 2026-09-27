@@ -17,7 +17,7 @@ export function TeamBadge({ teamId, size = "sm" }: { teamId: string; size?: "sm"
     <Link
       href={`/teams/${team.id}`}
       title={`${team.city} ${team.name}`}
-      className="glow-on-hover-logo inline-flex shrink-0 items-center justify-center"
+      className="glow-on-hover-logo inline-flex shrink-0 items-center justify-center transition-transform duration-200 ease-out hover:scale-110 active:scale-95"
       style={glowVars}
     >
       <Image

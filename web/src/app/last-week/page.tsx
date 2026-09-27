@@ -11,6 +11,7 @@ import {
   getNotableInjuries,
   WeeklyStatRow,
 } from "@/lib/data/lastWeek";
+import { staggerDelay } from "@/lib/style";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,11 @@ export default async function LastWeekPage() {
         <Section title="Top Focus Grades">
           <ol className="space-y-1.5 text-sm">
             {focusGrades.map((g, i) => (
-              <li key={g.playerId} className="flex items-center justify-between">
+              <li
+                key={g.playerId}
+                className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-0.5 transition-colors duration-150 hover:bg-white/[0.025]"
+                style={staggerDelay(i)}
+              >
                 <span className="flex items-center gap-2">
                   <span className="w-4 text-[var(--muted)]">{i + 1}</span>
                   <TeamBadge teamId={g.teamId} />
@@ -85,8 +90,12 @@ export default async function LastWeekPage() {
 
         <Section title="Full Scores & Results">
           <ul className="space-y-1.5 text-sm">
-            {results.map((g) => (
-              <li key={g.gameId} className="flex items-center justify-between">
+            {results.map((g, i) => (
+              <li
+                key={g.gameId}
+                className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-0.5 transition-colors duration-150 hover:bg-white/[0.025]"
+                style={staggerDelay(i)}
+              >
                 <span className="flex items-center gap-2">
                   <TeamBadge teamId={g.awayTeamId} />
                   <span className="text-[var(--muted)]">@</span>
@@ -105,8 +114,12 @@ export default async function LastWeekPage() {
             <p className="text-sm text-[var(--muted)]">No notable injury designations that week.</p>
           ) : (
             <ul className="space-y-1.5 text-sm">
-              {injuries.map((inj) => (
-                <li key={inj.playerId} className="flex items-center justify-between">
+              {injuries.map((inj, i) => (
+                <li
+                  key={inj.playerId}
+                  className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-0.5 transition-colors duration-150 hover:bg-white/[0.025]"
+                  style={staggerDelay(i)}
+                >
                   <span className="flex items-center gap-2">
                     <TeamBadge teamId={inj.teamId} />
                     <PlayerLink id={inj.playerId} name={inj.playerName} teamId={inj.teamId} />
@@ -151,7 +164,11 @@ function StatList({
   return (
     <ol className={`space-y-1 ${compact ? "text-xs" : "text-sm"}`}>
       {rows.map((r, i) => (
-        <li key={r.playerId} className="flex items-center justify-between">
+        <li
+          key={r.playerId}
+          className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-0.5 transition-colors duration-150 hover:bg-white/[0.025]"
+          style={staggerDelay(i)}
+        >
           <span className="flex items-center gap-2">
             <span className="w-4 text-[var(--muted)]">{i + 1}</span>
             <TeamBadge teamId={r.teamId} size="sm" />

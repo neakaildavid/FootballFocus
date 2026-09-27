@@ -49,7 +49,7 @@ export function CommandPalette() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Search players and teams"
-        className="glow-on-hover flex items-center gap-2 rounded-xl border border-[var(--border)] px-3.5 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
+        className="glow-on-hover press-feedback flex items-center gap-2 rounded-xl border border-[var(--border)] px-3.5 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
         style={{ "--glow-strong": "rgba(242,241,236,0.25)", "--glow-soft": "rgba(242,241,236,0.12)" } as React.CSSProperties}
       >
         <span aria-hidden>⌕</span>
@@ -61,11 +61,11 @@ export function CommandPalette() {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 pt-[12vh]"
+          className="overlay-fade-in fixed inset-0 z-50 flex items-start justify-center bg-black/70 pt-[12vh]"
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-lg mx-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
+            className="modal-scale-in w-full max-w-lg mx-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <Command shouldFilter={false}>
@@ -91,7 +91,7 @@ export function CommandPalette() {
                     key={r.id}
                     value={r.id}
                     onSelect={() => go(r.href)}
-                    className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-sm data-[selected=true]:bg-white/5"
+                    className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 data-[selected=true]:bg-white/5"
                   >
                     <span>{r.label}</span>
                     <span className="text-xs text-[var(--muted)]">{r.sub}</span>

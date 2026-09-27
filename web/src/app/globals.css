@@ -101,3 +101,89 @@ a {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
+
+/* ---- Motion system ----
+   A small, shared vocabulary so every animation in the app moves at the
+   same rhythm instead of each component inventing its own timing. */
+:root {
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 340ms;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Applied by PageTransition.tsx, keyed on pathname, so it replays on every
+   route change without needing per-page wiring. */
+.page-transition {
+  animation: fade-up var(--duration-slow) var(--ease-premium) both;
+}
+
+/* Table rows / list items / cards that should reveal in sequence rather
+   than all at once — pair with an inline animationDelay from
+   lib/style.ts's staggerDelay(). Replays on mount, so filtering a list
+   into a new set of rows (different keys) re-triggers it too. */
+.stagger-item {
+  animation: fade-up var(--duration-base) var(--ease-premium) both;
+}
+
+/* Lifts a card/link off the flat dark surface on hover — the depth cue
+   this theme otherwise lacks, kept subtle per the minimalist spec. */
+.card-hover {
+  transition:
+    transform var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+.card-hover:hover,
+.card-hover:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 32px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* Tactile press feedback for clickable elements whose hover state doesn't
+   already move (e.g. filter pills, icon buttons). */
+.press-feedback {
+  transition: transform 150ms var(--ease-standard);
+}
+.press-feedback:active {
+  transform: scale(0.97);
+}
+
+.overlay-fade-in {
+  animation: fade-in var(--duration-fast) ease-out both;
+}
+.modal-scale-in {
+  animation: scale-in var(--duration-base) var(--ease-premium) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid rgba(244, 244, 242, 0.6);
+  outline-offset: 3px;
+}

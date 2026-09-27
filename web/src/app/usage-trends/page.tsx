@@ -4,6 +4,7 @@ import { PlayerLink } from "@/components/PlayerLink";
 import { TeamBadge } from "@/components/TeamBadge";
 import { getLatestStatsSeason } from "@/lib/data/season";
 import { getUsageMovers, USAGE_METRICS, UsageMetric, UsageMoverRow } from "@/lib/data/usageTrends";
+import { staggerDelay } from "@/lib/style";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,10 @@ export default async function UsageTrendsPage({
           <Link
             key={m.key}
             href={`/usage-trends?metric=${m.key}`}
-            className={`rounded px-2.5 py-1 text-xs ${
+            className={`press-feedback rounded px-2.5 py-1 text-xs transition-colors duration-200 ${
               metric === m.key
                 ? "bg-white/10 text-[var(--foreground)]"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/[0.04]"
             }`}
           >
             {m.label}
@@ -76,7 +77,11 @@ function MoverList({ rows }: { rows: UsageMoverRow[] }) {
   return (
     <ol className="space-y-1.5 text-sm">
       {rows.slice(0, 15).map((r, i) => (
-        <li key={r.playerId} className="flex items-center justify-between">
+        <li
+          key={r.playerId}
+          className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-0.5 transition-colors duration-150 hover:bg-white/[0.025]"
+          style={staggerDelay(i, 25)}
+        >
           <span className="flex items-center gap-2">
             <span className="w-4 text-[var(--muted)]">{i + 1}</span>
             <TeamBadge teamId={r.teamId} />

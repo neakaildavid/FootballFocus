@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NAV_ITEMS } from "@/lib/nav";
+import { staggerDelay } from "@/lib/style";
 
 export default function Home() {
   return (
@@ -13,15 +14,16 @@ export default function Home() {
       </div>
 
       <nav className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map((item, i) => (
           <Link
             key={item.href}
             href={item.href}
-            className="glow-on-hover rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 transition-colors hover:bg-white/[0.03]"
+            className="glow-on-hover card-hover press-feedback stagger-item rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 transition-colors hover:bg-white/[0.03]"
             style={
               {
                 "--glow-strong": "rgba(242,241,236,0.15)",
                 "--glow-soft": "rgba(242,241,236,0.06)",
+                ...staggerDelay(i),
               } as React.CSSProperties
             }
           >

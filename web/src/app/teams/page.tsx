@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { PageHeader } from "@/components/PageHeader";
 import { TEAMS, getTeamLogoUrl } from "@/lib/teams";
+import { staggerDelay } from "@/lib/style";
 
 const DIVISIONS = ["East", "North", "South", "West"] as const;
 
@@ -19,11 +20,11 @@ export default function TeamsIndexPage() {
                   {div}
                 </h3>
                 <ul className="space-y-2">
-                  {TEAMS.filter((t) => t.conference === conf && t.division === div).map((t) => (
-                    <li key={t.id}>
+                  {TEAMS.filter((t) => t.conference === conf && t.division === div).map((t, i) => (
+                    <li key={t.id} className="stagger-item" style={staggerDelay(i)}>
                       <Link
                         href={`/teams/${t.id}`}
-                        className="glow-on-hover-text flex items-center gap-2 text-sm"
+                        className="glow-on-hover-text press-feedback flex items-center gap-2 text-sm transition-transform duration-200 hover:translate-x-0.5"
                         style={
                           {
                             "--glow-strong": `${t.color}80`,

@@ -4,6 +4,7 @@ import { TeamBadge } from "@/components/TeamBadge";
 import { ComingSoon } from "@/components/ComingSoon";
 import { getCurrentWeek, getWeekGames, getWeekInjuries, getWeekOdds } from "@/lib/data/thisWeek";
 import { getLatestPowerRankings } from "@/lib/data/powerRankings";
+import { staggerDelay } from "@/lib/style";
 
 export const dynamic = "force-dynamic";
 
@@ -42,11 +43,15 @@ export default async function ThisWeekPage() {
         <section className="sm:col-span-2">
           <h2 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted)]">Matchups</h2>
           <ul className="divide-y divide-[var(--border)]">
-            {games.map((g) => {
+            {games.map((g, i) => {
               const gameOdds = odds.get(g.gameId);
               const isFinal = g.status === "final";
               return (
-                <li key={g.gameId} className="flex items-center justify-between py-2.5 text-sm">
+                <li
+                  key={g.gameId}
+                  className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-2.5 text-sm transition-colors duration-150 hover:bg-white/[0.025]"
+                  style={staggerDelay(i)}
+                >
                   <span className="flex items-center gap-2">
                     <TeamBadge teamId={g.awayTeamId} />
                     <span className="text-[var(--muted)]">@</span>
@@ -101,11 +106,15 @@ export default async function ThisWeekPage() {
             <ComingSoon phase="run pipeline.run_compute --only power_rankings for this season" />
           ) : (
             <ul className="space-y-1.5 text-sm">
-              {games.map((g) => {
+              {games.map((g, i) => {
                 const homeRank = rankByTeam.get(g.homeTeamId);
                 const awayRank = rankByTeam.get(g.awayTeamId);
                 return (
-                  <li key={g.gameId} className="flex items-center justify-between">
+                  <li
+                    key={g.gameId}
+                    className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-0.5 transition-colors duration-150 hover:bg-white/[0.025]"
+                    style={staggerDelay(i)}
+                  >
                     <span className="flex items-center gap-1.5">
                       <TeamBadge teamId={g.awayTeamId} size="sm" />
                       <span className="text-xs text-[var(--muted)]">
@@ -138,8 +147,8 @@ export default async function ThisWeekPage() {
             <p className="text-sm text-[var(--muted)]">No injury designations reported yet this week.</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {[...injuriesByTeam.entries()].map(([teamId, list]) => (
-                <div key={teamId}>
+              {[...injuriesByTeam.entries()].map(([teamId, list], i) => (
+                <div key={teamId} className="stagger-item" style={staggerDelay(i)}>
                   <div className="mb-1 flex items-center gap-2">
                     <TeamBadge teamId={teamId} />
                   </div>

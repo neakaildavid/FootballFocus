@@ -3,6 +3,7 @@ import { TeamBadge } from "@/components/TeamBadge";
 import { getLatestStatsSeason } from "@/lib/data/season";
 import { getSuperBowlOdds } from "@/lib/data/superBowl";
 import { ComingSoon } from "@/components/ComingSoon";
+import { staggerDelay } from "@/lib/style";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,12 @@ export default async function SuperBowlPage() {
               </tr>
             </thead>
             <tbody>
-              {odds.map((o) => (
-                <tr key={o.teamId} className="border-b border-[var(--border)]/60">
+              {odds.map((o, i) => (
+                <tr
+                  key={o.teamId}
+                  className="stagger-item border-b border-[var(--border)]/60 transition-colors duration-150 hover:bg-white/[0.025]"
+                  style={staggerDelay(i)}
+                >
                   <td className="py-2 pr-3 text-[var(--muted)]">{o.rank}</td>
                   <td className="py-2 pr-3">
                     <span className="flex items-center gap-2">

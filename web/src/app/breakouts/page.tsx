@@ -4,6 +4,7 @@ import { TeamBadge } from "@/components/TeamBadge";
 import { TrendArrow } from "@/components/TrendArrow";
 import { getLatestStatsSeason } from "@/lib/data/season";
 import { getBreakoutCandidates } from "@/lib/data/breakouts";
+import { staggerDelay } from "@/lib/style";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +33,12 @@ export default async function BreakoutsPage() {
             </tr>
           </thead>
           <tbody>
-            {candidates.map((c) => (
-              <tr key={c.playerId} className="border-b border-[var(--border)]/60">
+            {candidates.map((c, i) => (
+              <tr
+                key={c.playerId}
+                className="stagger-item border-b border-[var(--border)]/60 transition-colors duration-150 hover:bg-white/[0.025]"
+                style={staggerDelay(i)}
+              >
                 <td className="py-2.5 pr-3">
                   <PlayerLink id={c.playerId} name={c.playerName} teamId={c.teamId} />
                   <span className="ml-2 text-xs text-[var(--muted)]">{c.position}</span>

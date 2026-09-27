@@ -4,6 +4,7 @@ import { getLatestStatsSeason } from "@/lib/data/season";
 import { getStandings } from "@/lib/data/standings";
 import { getLatestPowerRankings } from "@/lib/data/powerRankings";
 import { TEAMS, Conference, Division } from "@/lib/teams";
+import { staggerDelay } from "@/lib/style";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +41,12 @@ export default async function StandingsPage() {
                     <h4 className="mb-1 text-xs uppercase tracking-wide text-[var(--muted)]">{div}</h4>
                     <table className="w-full text-xs">
                       <tbody>
-                        {teams.map(({ team, s }) => (
-                          <tr key={team.id} className="border-b border-[var(--border)]/60">
+                        {teams.map(({ team, s }, i) => (
+                          <tr
+                            key={team.id}
+                            className="stagger-item border-b border-[var(--border)]/60 transition-colors duration-150 hover:bg-white/[0.025]"
+                            style={staggerDelay(i, 25)}
+                          >
                             <td className="py-1.5 pr-2">
                               <span className="flex items-center gap-1.5">
                                 <TeamBadge teamId={team.id} />
@@ -84,10 +89,14 @@ export default async function StandingsPage() {
             </tr>
           </thead>
           <tbody>
-            {rankings.map((r) => {
+            {rankings.map((r, i) => {
               const s = standingsByTeam.get(r.teamId);
               return (
-                <tr key={r.teamId} className="border-b border-[var(--border)]/60">
+                <tr
+                  key={r.teamId}
+                  className="stagger-item border-b border-[var(--border)]/60 transition-colors duration-150 hover:bg-white/[0.025]"
+                  style={staggerDelay(i)}
+                >
                   <td className="py-2 pr-3 text-[var(--muted)]">{r.rank}</td>
                   <td className="py-2 pr-3">
                     <span className="flex items-center gap-2">

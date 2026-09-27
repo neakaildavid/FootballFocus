@@ -9,6 +9,7 @@ import { computeTrendFromSeries } from "@/lib/trend";
 import { PlayerLink } from "@/components/PlayerLink";
 import { TeamBadge } from "@/components/TeamBadge";
 import { TrendArrow } from "@/components/TrendArrow";
+import { staggerDelay } from "@/lib/style";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,10 @@ export default async function TeamPage({
     <div>
       <div className="mb-8 border-b border-[var(--border)] pb-6">
         <div className="flex items-center gap-4">
-          <span className="glow-static flex h-16 w-16 items-center justify-center rounded-2xl" style={glowVars}>
+          <span
+            className="glow-static modal-scale-in flex h-16 w-16 items-center justify-center rounded-2xl"
+            style={glowVars}
+          >
             <Image
               src={getTeamLogoUrl(team.id)}
               alt={`${team.city} ${team.name} logo`}
@@ -73,8 +77,12 @@ export default async function TeamPage({
             {roster.length === 0 && (
               <li className="text-[var(--muted)]">No offensive players on record for this team.</li>
             )}
-            {roster.map((p) => (
-              <li key={p.id} className="flex items-center justify-between">
+            {roster.map((p, i) => (
+              <li
+                key={p.id}
+                className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-0.5 transition-colors duration-150 hover:bg-white/[0.025]"
+                style={staggerDelay(i)}
+              >
                 <PlayerLink id={p.id} name={p.fullName} teamId={team.id} />
                 <span className="text-xs text-[var(--muted)]">{p.position}</span>
               </li>
@@ -112,8 +120,12 @@ export default async function TeamPage({
             <p className="text-sm text-[var(--muted)]">No games on record for this team yet.</p>
           ) : (
             <ul className="space-y-1.5 text-sm">
-              {schedule.map((g) => (
-                <li key={g.gameId} className="flex items-center justify-between">
+              {schedule.map((g, i) => (
+                <li
+                  key={g.gameId}
+                  className="stagger-item flex items-center justify-between rounded-lg px-1.5 py-0.5 transition-colors duration-150 hover:bg-white/[0.025]"
+                  style={staggerDelay(i)}
+                >
                   <span className="flex items-center gap-2">
                     <span className="w-10 text-[var(--muted)]">Wk {g.week}</span>
                     <span className="text-[var(--muted)]">{g.isHome ? "vs" : "@"}</span>

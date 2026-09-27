@@ -5,6 +5,7 @@ import { getTeam } from "@/lib/teams";
 import { TeamBadge } from "@/components/TeamBadge";
 import { TrendArrow } from "@/components/TrendArrow";
 import { ComingSoon } from "@/components/ComingSoon";
+import { staggerDelay } from "@/lib/style";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function PlayerPage({
 
   return (
     <div>
-      <div className="mb-8 flex items-center gap-3 border-b border-[var(--border)] pb-4">
+      <div className="modal-scale-in mb-8 flex items-center gap-3 border-b border-[var(--border)] pb-4">
         {profile.teamId && <TeamBadge teamId={profile.teamId} size="md" />}
         <div>
           <h1 className="text-lg font-bold tracking-tight">{profile.fullName}</h1>
@@ -105,11 +106,12 @@ export default async function PlayerPage({
               </p>
             ) : (
               <ul className="flex flex-wrap gap-1.5">
-                {focusGradeHistory.map((h) => (
+                {focusGradeHistory.map((h, i) => (
                   <li
                     key={h.week}
                     title={`Week ${h.week}: ${h.grade.toFixed(1)}`}
-                    className="flex h-9 w-9 flex-col items-center justify-center rounded border border-[var(--border)] text-xs"
+                    className="stagger-item flex h-9 w-9 flex-col items-center justify-center rounded border border-[var(--border)] text-xs transition-transform duration-200 hover:scale-110 hover:border-white/30"
+                    style={staggerDelay(i, 25)}
                   >
                     <span className="text-[var(--muted)]">{h.week}</span>
                     <span className="tabular-nums font-semibold">{Math.round(h.grade)}</span>
@@ -226,8 +228,12 @@ function GameLogTable({
           </tr>
         </thead>
         <tbody>
-          {gameLog.map((g) => (
-            <tr key={g.week} className="border-b border-[var(--border)]/60">
+          {gameLog.map((g, i) => (
+            <tr
+              key={g.week}
+              className="stagger-item border-b border-[var(--border)]/60 transition-colors duration-150 hover:bg-white/[0.025]"
+              style={staggerDelay(i)}
+            >
               <td className="py-2 pr-3 text-[var(--muted)]">{g.week}</td>
               <td className="py-2 pr-3">
                 <TeamBadge teamId={g.opponentTeamId} />
