@@ -1,0 +1,66 @@
+name: Full stat refresh
+
+# Runs the complete pipeline (ingestion + Focus Grade/Power Rankings/Super
+# Bowl odds recompute) every 6 hours during the season, so stats/leaders/
+# grades/rankings update after each day of games rather than waiting for a
+# once-a-week cron — replaces the old weekly-only refresh. Safe to run
+# this often: every step is upsert-based (see pipeline/upsert.py), so a
+# run with no new games is a harmless no-op, and this repo being public
+# means GitHub Actions minutes are free and unlimited.
+#
+# Gated to actual NFL season months (Aug-Feb) so this doesn't spend The
+# Odds API's free-tier monthly request quota, or pointlessly re-pull
+# play-by-play, through the ~6 months of offseason when nothing changes.
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch: {} # lets you trigger a run manually from the Actions tab
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check if in NFL season (Aug-Feb)
+        id: season_check
+        run: |
+          MONTH=$(date -u +%-m)
+          if [ "$MONTH" -ge 8 ] || [ "$MONTH" -le 2 ]; then
+            echo "in_season=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "in_season=false" >> "$GITHUB_OUTPUT"
+            echo "Off-season (month=$MONTH) — skipping."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.season_check.outputs.in_season == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.season_check.outputs.in_season == 'true'
+        with:
+          python-version: "3.11" # pipeline/requirements.txt pins pandas==1.5.3, no 3.13+ wheel
+
+      - run: pip install -r pipeline/requirements.txt
+        if: steps.season_check.outputs.in_season == 'true'
+
+      - name: Determine current NFL season
+        if: steps.season_check.outputs.in_season == 'true'
+        run: |
+          MONTH=$(date -u +%-m)
+          YEAR=$(date -u +%Y)
+          if [ "$MONTH" -ge 8 ]; then SEASON=$YEAR; else SEASON=$((YEAR - 1)); fi
+          echo "SEASON=$SEASON" >> "$GITHUB_ENV"
+          echo "Refreshing season $SEASON"
+
+      - name: Ingest current season (stats, rosters, snap counts, schedules, play-by-play, odds)
+        if: steps.season_check.outputs.in_season == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python -m pipeline.run_ingestion --seasons "$SEASON"
+
+      - name: Recompute Focus Grade / Power Rankings / Super Bowl odds
+        if: steps.season_check.outputs.in_season == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m pipeline.run_compute --season "$SEASON"

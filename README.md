@@ -230,21 +230,36 @@ live site since then, beyond the numbered build order above:
   every game *is* final — so the moment a week's last game ends, it moves
   from one page to the other automatically, with no date arithmetic or
   hardcoded season/week logic anywhere.
+- **Focus Grade v2**: reworked to blend `epa_total` (total EPA added, not
+  divided by touches) alongside the original per-play efficiency rate —
+  v1 was pure efficiency with no volume weighting, so a 2-target
+  one-big-play game could out-grade a 12-target workhorse day. See
+  `pipeline/compute/focus_grade.py`'s docstring and
+  `db/migrations/0003_focus_grade_volume_component.sql`.
+- **Full refresh cadence**: `weekly-refresh.yml` and `frequent-refresh.yml`
+  were merged into one `full-refresh.yml` that runs the *entire* pipeline
+  (not just injuries/odds) every 6 hours in-season, so stats/leaders/
+  grades/rankings update after each day of games instead of waiting for a
+  once-a-week Tuesday cron. Safe at that frequency since every ingestion/
+  compute step is upsert-based — a run with no new games is a no-op — and
+  since this repo is public, GitHub Actions minutes are free and
+  unlimited, so there's no cost reason to run it less often.
 
 ## Scheduled jobs
 
-The workflows in `.github/workflows/` need three things this environment
-can't provide, in order:
+The site is live (football-focus.vercel.app) with production Neon and
+repository secrets already configured, so the workflows in
+`.github/workflows/` run on their own. If you're setting this up fresh
+elsewhere (a fork, a new environment), you need three things first, in
+order:
 
 1. **The repo pushed to GitHub.** Scheduled workflows only run once
    committed to the default branch on GitHub itself — a local commit
-   isn't enough. This repo has a `origin` remote configured
-   (`neakaildavid/FootballFocus`) but hasn't been pushed yet.
-2. **A production database.** Neon hasn't been set up yet (see the
-   architecture decision above) — `db/README.md` has the exact steps.
-   Once you have a connection string, run `db/migrate.sh` + `db/seed.sh`
-   against it once (locally, or via the `db-migrate.yml` workflow after
-   step 3 below).
+   isn't enough.
+2. **A production database.** `db/README.md` has the exact Neon setup
+   steps. Once you have a connection string, run `db/migrate.sh` +
+   `db/seed.sh` against it once (locally, or via the `db-migrate.yml`
+   workflow after step 3 below).
 3. **Repository secrets**, under Settings → Secrets and variables →
    Actions:
    - `DATABASE_URL` — the Neon connection string from step 2.
@@ -254,9 +269,9 @@ can't provide, in order:
      `pipeline/ingest/odds.py`), so it's fine to turn these on before
      you have a key and add it later.
 
-After that, `weekly-refresh.yml` and `frequent-refresh.yml` run on their
-own; trigger any workflow manually from the Actions tab
-(`workflow_dispatch`) to test it without waiting for the schedule.
+After that, `full-refresh.yml` runs on its own every 6 hours in-season;
+trigger any workflow manually from the Actions tab (`workflow_dispatch`)
+to test it without waiting for the schedule.
 
 ## Development
 
