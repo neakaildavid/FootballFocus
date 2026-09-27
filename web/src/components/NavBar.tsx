@@ -15,7 +15,13 @@ export function NavBar() {
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
         <Link
           href="/"
-          className="press-feedback shrink-0 text-base font-bold tracking-tight transition-opacity duration-200 hover:opacity-80"
+          className="glow-on-hover-text press-feedback shrink-0 text-base font-bold tracking-tight"
+          style={
+            {
+              "--glow-strong": "rgba(244,241,236,0.5)",
+              "--glow-soft": "rgba(244,241,236,0.22)",
+            } as React.CSSProperties
+          }
         >
           Football<span className="text-[var(--muted)]"> Focus</span>
         </Link>

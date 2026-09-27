@@ -11,7 +11,7 @@ export async function getSuperBowlOdds(season: number): Promise<SuperBowlOddsRow
     `
     SELECT team_id AS "teamId", rank, implied_probability::text AS "impliedProbability"
     FROM super_bowl_odds
-    WHERE season = $1
+    WHERE season = $1 AND week = (SELECT max(week) FROM super_bowl_odds WHERE season = $1)
     ORDER BY rank ASC
     `,
     [season]

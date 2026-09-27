@@ -164,6 +164,20 @@ a {
   transform: scale(0.97);
 }
 
+/* Slow ambient drift for AmbientGlow.tsx's decorative blobs. */
+.ambient-glow {
+  opacity: 0.32;
+  animation: drift 14s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(18px, -14px, 0) scale(1.08);
+  }
+}
+
 .overlay-fade-in {
   animation: fade-in var(--duration-fast) ease-out both;
 }
@@ -186,4 +200,12 @@ a {
 :focus-visible {
   outline: 2px solid rgba(244, 244, 242, 0.6);
   outline-offset: 3px;
+}
+
+/* Inputs that sit inside an already-framed container (e.g. the command
+   palette) draw their own focus cue instead of the generic outline box,
+   which looked like a stray rectangle floating in the modal. */
+.no-focus-ring:focus,
+.no-focus-ring:focus-visible {
+  outline: none;
 }

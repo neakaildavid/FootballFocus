@@ -69,14 +69,14 @@ export function CommandPalette() {
             onClick={(e) => e.stopPropagation()}
           >
             <Command shouldFilter={false}>
-              <div className="flex items-center border-b border-[var(--border)] px-4">
+              <div className="flex items-center border-b border-[var(--border)] px-4 transition-colors duration-200 focus-within:border-white/25">
                 <span className="mr-2 text-[var(--muted)]" aria-hidden>⌕</span>
                 <Command.Input
                   autoFocus
                   value={query}
                   onValueChange={setQuery}
                   placeholder="Jump to a player or team…"
-                  className="w-full bg-transparent py-3.5 text-base outline-none placeholder:text-[var(--muted)]"
+                  className="no-focus-ring w-full bg-transparent py-3.5 text-base outline-none placeholder:text-[var(--muted)]"
                 />
                 <kbd className="text-xs text-[var(--muted)] border border-[var(--border)] rounded-md px-1.5 py-0.5">
                   esc
