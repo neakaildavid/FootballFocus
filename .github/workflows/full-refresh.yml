@@ -59,8 +59,11 @@ jobs:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: python -m pipeline.run_ingestion --seasons "$SEASON"
 
+      # Still runs if ingestion exited non-zero: run_ingestion isolates step
+      # failures and exits 1 only to flag a *degraded* run, so whatever it
+      # did write should still flow through to grades/rankings.
       - name: Recompute Focus Grade / Power Rankings / Super Bowl odds
-        if: steps.season_check.outputs.in_season == 'true'
+        if: ${{ !cancelled() && steps.season_check.outputs.in_season == 'true' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python -m pipeline.run_compute --season "$SEASON"

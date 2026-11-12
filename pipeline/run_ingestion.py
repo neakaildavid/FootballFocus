@@ -14,7 +14,9 @@ Usage:
 """
 
 import argparse
+import sys
 import time
+import traceback
 
 import nfl_data_py as nfl
 
@@ -36,6 +38,44 @@ def _timed(label, fn):
     t0 = time.time()
     n = fn()
     print(f"  {label}: {n} rows written ({time.time() - t0:.1f}s)")
+
+
+def _report_failure(name: str, failures: list[str]) -> None:
+    failures.append(name)
+    # `::error::` renders as a red annotation on the GitHub Actions run.
+    print(f"::error title=Ingestion step failed::{name}", flush=True)
+    traceback.print_exc()
+    sys.stderr.flush()
+
+
+def _run_step(conn, name: str, fn, failures: list[str]) -> None:
+    """Runs one ingestion step and commits it. A failure is rolled back
+    (psycopg leaves the transaction aborted after a failed statement, so
+    without the rollback every later step would fail too), logged with its
+    traceback, and recorded — then the run continues with the next step.
+    Steps are already ordered so a failed one only leaves later steps
+    working from slightly stale rows, not broken ones."""
+    print(f"[step] {name}", flush=True)
+    try:
+        fn()
+        conn.commit()
+    except Exception:
+        _report_failure(name, failures)
+        try:
+            conn.rollback()
+        except Exception:
+            traceback.print_exc()
+
+
+def _fetch(name: str, fn, failures: list[str]):
+    """A top-level nflverse pull whose result several steps share. Returns
+    None on failure (dependent steps are then skipped)."""
+    try:
+        return fn()
+    except Exception:
+        _report_failure(f"fetch {name}", failures)
+        print(f"  skipping steps that depend on {name}", flush=True)
+        return None
 
 
 def _run_weekly_stats(conn, resolve_team, seasons):
@@ -116,41 +156,41 @@ def main() -> None:
     seasons = args.seasons
     skip = set(args.skip)
 
+    failures: list[str] = []
+
+    def step(name, fn):
+        if name in skip:
+            return
+        _run_step(conn, name, fn, failures)
+
     with get_conn() as conn:
         resolve_team = build_team_resolver(conn)
 
-        print(f"Fetching import_players() (needed for {['players','snap_counts','injuries']})...")
-        players_df = nfl.import_players()
-        if "players" not in skip:
-            _timed("players", lambda: ingest_players(conn, resolve_team, players_df))
-            conn.commit()
+        print(f"Fetching import_players() (needed for {['players','snap_counts']})...")
+        players_df = _fetch("import_players", nfl.import_players, failures)
+        if players_df is not None:
+            step("players", lambda: _timed("players", lambda: ingest_players(conn, resolve_team, players_df)))
 
         print("Fetching import_schedules()...")
-        schedules_df = nfl.import_schedules(seasons)
-        if "games" not in skip:
-            _timed("games", lambda: ingest_games(conn, resolve_team, schedules_df))
-            conn.commit()
+        schedules_df = _fetch("import_schedules", lambda: nfl.import_schedules(seasons), failures)
+        if schedules_df is not None:
+            step("games", lambda: _timed("games", lambda: ingest_games(conn, resolve_team, schedules_df)))
 
-        if "team_stats" not in skip:
-            _timed("team_weekly_stats (basic)", lambda: ingest_team_weekly_stats_basic(conn, seasons))
-            conn.commit()
+        step(
+            "team_stats",
+            lambda: _timed("team_weekly_stats (basic)", lambda: ingest_team_weekly_stats_basic(conn, seasons)),
+        )
+        step("weekly_stats", lambda: _run_weekly_stats(conn, resolve_team, seasons))
+        if players_df is not None:
+            step("snap_counts", lambda: _run_snap_counts(conn, resolve_team, players_df, seasons))
+        step("injuries", lambda: _run_injuries(conn, resolve_team, seasons))
+        step("pbp_metrics", lambda: _run_pbp_metrics(conn, resolve_team, seasons))
+        step("odds", lambda: _timed("betting_odds (live)", lambda: ingest_live_odds(conn)))
 
-        if "weekly_stats" not in skip:
-            _run_weekly_stats(conn, resolve_team, seasons)
-
-        if "snap_counts" not in skip:
-            _run_snap_counts(conn, resolve_team, players_df, seasons)
-
-        if "injuries" not in skip:
-            _run_injuries(conn, resolve_team, seasons)
-
-        if "pbp_metrics" not in skip:
-            _run_pbp_metrics(conn, resolve_team, seasons)
-
-        if "odds" not in skip:
-            _timed("betting_odds (live)", lambda: ingest_live_odds(conn))
-            conn.commit()
-
+    if failures:
+        print(f"::error title=Ingestion degraded::{len(failures)} step(s) failed: {', '.join(failures)}")
+        print(f"done, with FAILURES in: {', '.join(failures)} (see tracebacks above)")
+        sys.exit(1)
     print("done.")
 
 

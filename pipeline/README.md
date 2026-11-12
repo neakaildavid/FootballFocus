@@ -51,8 +51,31 @@ python -m pipeline.run_compute --season 2024
 Steps run in dependency order (`players` and `games` must land before
 `weekly_stats`/`snap_counts`/`injuries` can resolve their foreign keys) and
 each commits independently, so a later step failing doesn't roll back
-earlier ones. `--skip STEP...` skips DB writes for steps you've already run
+earlier ones. A step that raises is rolled back, logged with its full
+traceback (plus a `::error::` annotation in GitHub Actions), and the run
+carries on with the next step; the process exits 1 at the end if any step
+failed. `--skip STEP...` skips DB writes for steps you've already run
 this session; it still fetches whatever those steps' data feeds downstream.
+
+`players.id` (the URL slug) is assigned once per `gsis_id` and never
+changes afterwards, even if nflverse renames the player or a namesake
+appears — see `pipeline/ingest/players.py`'s docstring.
+
+## Tests
+
+```bash
+pipeline/.venv/bin/pip install -r pipeline/requirements-dev.txt
+
+# Pure-Python tests only (DB tests are skipped):
+pipeline/.venv/bin/python -m pytest pipeline/tests
+
+# Including the Postgres-backed regression tests. Point this at a dedicated,
+# disposable database (NOT dev/prod) — each test creates and drops its own
+# schema in it, with db/migrations + db/seed applied:
+createdb footballfocus_test
+TEST_DATABASE_URL=postgresql://localhost/footballfocus_test \
+  pipeline/.venv/bin/python -m pytest pipeline/tests
+```
 
 **Current dev DB state:** seasons 2015-2024 have `players`/`games`/
 `weekly_stats` (2016-2023 backfilled in build step 7 specifically so

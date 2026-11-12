@@ -1,0 +1,4 @@
+# Test-only dependencies (CI/production installs requirements.txt only).
+#   pipeline/.venv/bin/pip install -r pipeline/requirements-dev.txt
+-r requirements.txt
+pytest==8.4.2
